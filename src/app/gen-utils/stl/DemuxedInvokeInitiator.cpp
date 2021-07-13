@@ -36,8 +36,8 @@ CHIP_ERROR DemuxedInvokeInitiator::AddCommand(IEncodableElement *request, Comman
                   std::function<void (DemuxedInvokeInitiator& invokeInitiator, CommandParams&)> onDataFunc,
                   std::function<void (DemuxedInvokeInitiator& invokeInitiator, CHIP_ERROR error, StatusResponse *response)> onErrorFunc)
 {
-    auto onDataClosure = [onDataFunc](DemuxedInvokeInitiator& initiator, CommandParams &params, TLV::TLVReader *reader) {
-        onDataFunc(initiator, params);
+    auto onDataClosure = [onDataFunc](DemuxedInvokeInitiator& initiator, CommandParams &pparams, TLV::TLVReader *reader) {
+        onDataFunc(initiator, pparams);
     };
 
     mHandlers.push_back({onDataClosure, onErrorFunc, params.ClusterId, params.CommandId});
