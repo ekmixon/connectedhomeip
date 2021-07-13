@@ -242,6 +242,17 @@ int TestInvokeInteraction::GetNumActiveInvokes()
     return count;
 }
 
+/*
+ * @brief
+ *
+ * This test tries to achieve an 'end-to-end' test between a client and a server.
+ * Specifically, it has a client sending an invoke action to a server containing two commands targeting
+ * two different endpoints, with the server responding back syncronously with a response containing two response
+ * payloads.
+ *
+ * To achieve 'end-to-endness' within a single stack, the message is created and intercepted before it is sent out,
+ * and then 'looped back in' to the IM for it to make its way back up the stack to the application.
+ */
 void TestInvokeInteraction::TestInvokeInteractionSimple(nlTestSuite * apSuite, void * apContext)
 {
     CHIP_ERROR err = CHIP_NO_ERROR;
@@ -326,6 +337,17 @@ void TestInvokeInteraction::TestInvokeInteractionSimple(nlTestSuite * apSuite, v
     NL_TEST_ASSERT(apSuite, gTestInvoke.mGotCommandB == 2);
 }
 
+/*
+ * @brief
+ *
+ * This test tries to achieve an 'end-to-end' test between a client and a server.
+ * Specifically, it has a client sending an invoke action to a server containing two commands targeting
+ * two different endpoints, with the server responding back with a response containing two response
+ * payloads.
+ *
+ * The key distinction between this and the previous test is that one of the responses emitted by a cluster handler
+ * is done asyncronously.
+ */
 void TestInvokeInteraction::TestInvokeInteractionAsyncResponder(nlTestSuite * apSuite, void * apContext)
 {
     CHIP_ERROR err = CHIP_NO_ERROR;

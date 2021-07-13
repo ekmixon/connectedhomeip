@@ -126,7 +126,7 @@ CHIP_ERROR Print(TLV::TLVReader &reader, int tabLevel)
             err = reader.Get(v);
             SuccessOrExit(err);
 
-            printf("%lld,\n", v);
+            printf("%" PRId64 ",\n", v);
             break;
         }
 
@@ -137,7 +137,7 @@ CHIP_ERROR Print(TLV::TLVReader &reader, int tabLevel)
             err = reader.Get(v);
             SuccessOrExit(err);
 
-            printf("%llu,\n", v);
+            printf("%" PRIu64 ",\n", v);
             break;
         }
 

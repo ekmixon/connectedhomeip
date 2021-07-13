@@ -33,6 +33,8 @@ struct Test {
 
 static_assert(sizeof(chip::Span<uint8_t>) == sizeof(chip::Span<Test>), "Chip::Span cannot be type erasured");
 
+#pragma GCC diagnostic ignored "-Wstack-usage="
+
 namespace chip {
 namespace app {
 
