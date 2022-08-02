@@ -60,9 +60,22 @@ def FindCommandClusterObject(isClientSideCommand: bool, path: CommandPath):
                     for commandName, command in inspect.getmembers(subclass):
                         if inspect.isclass(command):
                             for name, field in inspect.getmembers(command):
-                                if ('__dataclass_fields__' in name):
-                                    if (field['cluster_id'].default == path.ClusterId) and (field['command_id'].default == path.CommandId) and (field['is_client'].default == isClientSideCommand):
-                                        return eval('chip.clusters.Objects.' + clusterName + '.Commands.' + commandName)
+                                if (
+                                    ('__dataclass_fields__' in name)
+                                    and (
+                                        field['cluster_id'].default
+                                        == path.ClusterId
+                                    )
+                                    and (
+                                        field['command_id'].default
+                                        == path.CommandId
+                                    )
+                                    and (
+                                        field['is_client'].default
+                                        == isClientSideCommand
+                                    )
+                                ):
+                                    return eval(f'chip.clusters.Objects.{clusterName}.Commands.{commandName}')
     return None
 
 
@@ -73,7 +86,7 @@ class AsyncCommandTransaction:
         self._expect_type = expectType
 
     def _handleResponse(self, path: CommandPath, status: Status, response: bytes):
-        if (len(response) == 0):
+        if not response:
             self._future.set_result(None)
         else:
             # If a type hasn't been assigned, let's auto-deduce it.

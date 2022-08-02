@@ -96,10 +96,9 @@ class Connection:
         self.needsOperationalCredentials = step.type == PairNotificationType.OPERATIONAL_CREDENTIALS
         self.paired = step.type == PairNotificationType.COMPLETE
 
-        if step.type == PairNotificationType.COMPLETE:
-            if step.error_code != 0:
-                raise Exception('Pairing ended with error code %d' %
-                                step.error_code)
+        if step.type == PairNotificationType.COMPLETE and step.error_code != 0:
+            raise Exception('Pairing ended with error code %d' %
+                            step.error_code)
 
 
 def _StartAsyncConnection(discriminator: int, pin: int, deprecated_nodeid: Optional[int] = None) -> Connection:

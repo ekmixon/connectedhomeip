@@ -32,7 +32,7 @@ def main():
         rawFile.write(rawImageContent)
 
     # Add an OTA header to the raw file
-    otaImageTool = DEFAULT_CHIP_ROOT + '/src/app/ota_image_tool.py'
+    otaImageTool = f'{DEFAULT_CHIP_ROOT}/src/app/ota_image_tool.py'
     cmd = [otaImageTool, 'create', '-v', '0xDEAD', '-p', '0xBEEF', '-vn', '2',
            '-vs', "2.0", '-da', 'sha256', rawImageFilePath, otaImageFilePath]
     s = subprocess.Popen(cmd)

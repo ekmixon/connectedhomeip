@@ -44,7 +44,7 @@ class Secrets:
 
     @staticmethod
     def _build_key(label: str, **kw):
-        return label + ":" + str(tuple(sorted(kw.items())))
+        return f"{label}:{tuple(sorted(kw.items()))}"
 
     def _load(self):
         try:
@@ -54,7 +54,7 @@ class Secrets:
             # Unpickling an empty file is not an error for us
             pass
         except ValueError as e:
-            print("ERROR: " + str(e), file=sys.stderr)
+            print(f"ERROR: {str(e)}", file=sys.stderr)
 
     def _save(self):
         try:
@@ -62,7 +62,7 @@ class Secrets:
             self.fp.truncate()
             pickle.dump(self.secrets, self.fp)
         except IOError as e:
-            print("ERROR: " + str(e), file=sys.stderr)
+            print(f"ERROR: {str(e)}", file=sys.stderr)
 
     def clear(self, label: str, **kw):
         key = self._build_key(label, **kw)

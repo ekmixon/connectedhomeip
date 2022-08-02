@@ -133,7 +133,7 @@ def DiscoverSync(timeoutMs: int, adapter=None) -> Generator[DeviceInfo, None, No
                   receiver.ScanCompleted, adapter)
 
     while True:
-        data = receiver.queue.get()
-        if not data:
+        if data := receiver.queue.get():
+            yield data
+        else:
             break
-        yield data

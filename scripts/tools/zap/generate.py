@@ -36,13 +36,13 @@ def checkPythonVersion():
 
 def checkFileExists(path):
     if not os.path.isfile(path):
-        print('Error: ' + path + ' does not exists or is not a file.')
+        print(f'Error: {path} does not exists or is not a file.')
         exit(1)
 
 
 def checkDirExists(path):
     if not os.path.isdir(path):
-        print('Error: ' + path + ' does not exists or is not a directory.')
+        print(f'Error: {path} does not exists or is not a directory.')
         exit(1)
 
 
@@ -105,11 +105,7 @@ def runArgumentsParser():
 
     zap_file = getFilePath(args.zap)
 
-    if args.zcl:
-        zcl_file = getFilePath(args.zcl)
-    else:
-        zcl_file = detectZclFile(zap_file)
-
+    zcl_file = getFilePath(args.zcl) if args.zcl else detectZclFile(zap_file)
     templates_file = getFilePath(args.templates)
     output_dir = getDirPath(output_dir)
 
@@ -130,7 +126,7 @@ def extractGeneratedIdl(output_dir, zap_config_path):
     if not target_path.endswith(".matter"):
         # We expect "something.zap" and don't handle corner cases of
         # multiple extensions. This is to work with existing codebase only
-        raise Error("Unexpected input zap file  %s" % self.zap_config)
+        raise Error(f"Unexpected input zap file  {self.zap_config}")
 
     os.rename(idl_path, target_path)
 
@@ -152,10 +148,13 @@ def runClangPrettifier(templates_file, output_dir):
         jsonData = json.loads(Path(templates_file).read_text())
         outputs = [(os.path.join(output_dir, template['output']))
                    for template in jsonData['templates']]
-        clangOutputs = list(filter(lambda filepath: os.path.splitext(
-            filepath)[1] in listOfSupportedFileExtensions, outputs))
-
-        if len(clangOutputs) > 0:
+        if clangOutputs := list(
+            filter(
+                lambda filepath: os.path.splitext(filepath)[1]
+                in listOfSupportedFileExtensions,
+                outputs,
+            )
+        ):
             # The "clang-format" pigweed comes with is now version 14, which
             # changed behavior from version 13 and earlier regarding some
             # whitespace formatting.  Unfortunately, all the CI bits run
@@ -167,8 +166,7 @@ def runClangPrettifier(templates_file, output_dir):
             # on Mac.  If all else fails, fall back to clang-format.
             clang_formats = ['clang-format-13', 'clang-format-12', 'clang-format-11', 'clang-format']
             for clang_format in clang_formats:
-                args = [clang_format, '-i']
-                args.extend(clangOutputs)
+                args = [clang_format, '-i', *clangOutputs]
                 try:
                     subprocess.check_call(args)
                     err = None
@@ -187,10 +185,12 @@ def runJavaPrettifier(templates_file, output_dir):
         jsonData = json.loads(Path(templates_file).read_text())
         outputs = [(os.path.join(output_dir, template['output']))
                    for template in jsonData['templates']]
-        javaOutputs = list(
-            filter(lambda filepath: os.path.splitext(filepath)[1] == ".java", outputs))
-
-        if len(javaOutputs) > 0:
+        if javaOutputs := list(
+            filter(
+                lambda filepath: os.path.splitext(filepath)[1] == ".java",
+                outputs,
+            )
+        ):
             # Keep this version in sync with what restyler uses (https://github.com/project-chip/connectedhomeip/blob/master/.restyled.yaml).
             google_java_format_version = "1.6"
             google_java_format_url = 'https://github.com/google/google-java-format/releases/download/google-java-format-' + \
@@ -201,9 +201,10 @@ def runJavaPrettifier(templates_file, output_dir):
 
             home = str(Path.home())
             path, http_message = urllib.request.urlretrieve(
-                jar_url, home + '/' + google_java_format_jar)
-            args = ['java', '-jar', path, '--replace']
-            args.extend(javaOutputs)
+                jar_url, f'{home}/{google_java_format_jar}'
+            )
+
+            args = ['java', '-jar', path, '--replace', *javaOutputs]
             subprocess.check_call(args)
     except Exception as err:
         print('google-java-format error:', err)

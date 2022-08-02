@@ -55,18 +55,14 @@ def FindCommand(command):
       command name does not have an extension.
     """
     fpath, _ = os.path.split(command)
-    if fpath:
-        if IsExecutable(command):
-            return command
+    if fpath and IsExecutable(command):
+        return command
 
     if sys.platform == 'win32':
         # On Windows, if the command does not have an extension, cmd.exe will
         # try all extensions from PATHEXT when resolving the full path.
         command, ext = os.path.splitext(command)
-        if not ext:
-            exts = os.environ['PATHEXT'].split(os.path.pathsep)
-        else:
-            exts = [ext]
+        exts = [ext] if ext else os.environ['PATHEXT'].split(os.path.pathsep)
     else:
         exts = ['']
 

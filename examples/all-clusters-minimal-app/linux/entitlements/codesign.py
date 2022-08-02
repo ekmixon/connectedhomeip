@@ -20,7 +20,7 @@ import re
 
 
 def run_command(command):
-    print("Running {}".format(command))
+    print(f"Running {command}")
     return str(subprocess.check_output(command.split()))
 
 
@@ -50,7 +50,7 @@ def codesign(args):
         target=args.target_path)
     command_result = run_command(command)
 
-    print("Codesign Result: {}".format(command_result))
+    print(f"Codesign Result: {command_result}")
     with open(args.log_path, "w") as f:
         f.write(command_result)
 

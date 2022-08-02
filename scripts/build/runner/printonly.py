@@ -28,7 +28,7 @@ class PrintOnlyRunner:
 
     def Run(self, cmd, title=None):
         if title:
-            self.output_file.write("# " + title + "\n")
+            self.output_file.write(f"# {title}" + "\n")
 
         self.output_file.write(
             " ".join([shlex.quote(part) for part in cmd]) + "\n")

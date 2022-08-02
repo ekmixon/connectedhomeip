@@ -81,7 +81,7 @@ class cc13x2x7_26x2x7Builder(GnBuilder):
             'ti_sysconfig_root="%s"' % os.environ['TI_SYSCONFIG_ROOT'],
         ]
 
-        if self.openthread_ftd == None:
+        if self.openthread_ftd is None:
             pass
         elif self.openthread_ftd:
             args.append('chip_openthread_ftd=true')
@@ -92,9 +92,11 @@ class cc13x2x7_26x2x7Builder(GnBuilder):
 
     def build_outputs(self):
         items = {}
-        if (self.app == cc13x2x7_26x2x7App.LOCK
-                or self.app == cc13x2x7_26x2x7App.PUMP
-                or self.app == cc13x2x7_26x2x7App.PUMP_CONTROLLER):
+        if self.app in [
+            cc13x2x7_26x2x7App.LOCK,
+            cc13x2x7_26x2x7App.PUMP,
+            cc13x2x7_26x2x7App.PUMP_CONTROLLER,
+        ]:
             extensions = [".out", ".bin", ".out.map", "-bim.hex"]
 
         elif self.app == cc13x2x7_26x2x7App.ALL_CLUSTERS or cc13x2x7_26x2x7App.ALL_CLUSTERS_MINIMAL or self.app == cc13x2x7_26x2x7App.SHELL:
@@ -104,7 +106,7 @@ class cc13x2x7_26x2x7Builder(GnBuilder):
             raise Exception('Unknown app type: %r' % self.app)
 
         for extension in extensions:
-            name = '%s%s' % (self.app.AppNamePrefix(), extension)
+            name = f'{self.app.AppNamePrefix()}{extension}'
             items[name] = os.path.join(self.output_dir, name)
 
         return items

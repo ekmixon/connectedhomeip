@@ -138,7 +138,9 @@ class Flasher:
         # Argument parser for `parse_argv()`. Normally defines command-line
         # options for most of the `self.option` keys.
         self.parser = argparse.ArgumentParser(
-            description='Flash {} device'.format(self.option.platform or 'a'))
+            description=f"Flash {self.option.platform or 'a'} device"
+        )
+
 
         # Argument parser groups.
         self.group = {}
@@ -161,7 +163,7 @@ class Flasher:
                 if attribute not in self.option:
                     setattr(self.option, attribute, info['default'])
                 # Add command line argument.
-                names = ['--' + key]
+                names = [f'--{key}']
                 if '_' in key:
                     names.append('--' + key.replace('_', '-'))
                 if 'alias' in info:
@@ -197,12 +199,12 @@ class Flasher:
                  capture_output=False):
         """Run an external tool."""
         if name is None:
-            name = 'Run ' + tool
+            name = f'Run {tool}'
         self.log(1, name)
 
         option_map = vars(self.option)
         if options:
-            option_map.update(options)
+            option_map |= options
         arguments = self.format_command(arguments, opt=option_map)
         if not getattr(self.option, tool, None):
             setattr(self.option, tool, self.locate_tool(tool))
@@ -232,16 +234,13 @@ class Flasher:
                 self.log(fail_level, '---')
         except FileNotFoundError as exception:
             self.err = exception.errno
-            if self.err == errno.ENOENT:
-                # This likely means that the program was not found.
-                # But if it seems OK, rethrow the exception.
-                if self.verify_tool(tool):
-                    raise exception
+            if self.err == errno.ENOENT and self.verify_tool(tool):
+                raise exception
 
         if self.err:
-            self.log(fail_level, fail_message or ('FAILED: ' + name))
+            self.log(fail_level, fail_message or f'FAILED: {name}')
         else:
-            self.log(2, pass_message or (name + ' complete'))
+            self.log(2, pass_message or f'{name} complete')
         return result
 
     def locate_tool(self, tool):
@@ -330,7 +329,7 @@ class Flasher:
                         ↦ ρᵢ if opt[name]==σᵢ
                           ρ otherwise
         """
-        if isinstance(template, str) or isinstance(template, pathlib.Path):
+        if isinstance(template, (str, pathlib.Path)):
             result = [str(template).format_map(opt)]
         elif isinstance(template, list):
             result = []
@@ -343,15 +342,14 @@ class Flasher:
                 name = template['optional']
                 value = opt.get(name)
                 if value is True:
-                    result = ['--' + name]
+                    result = [f'--{name}']
                 elif value:
-                    result = ['--' + name, value]
+                    result = [f'--{name}', value]
                 else:
                     result = []
             elif 'option' in template:
                 name = template['option']
-                value = opt.get(name)
-                if value:
+                if value := opt.get(name):
                     result = template.get('result', value)
                 else:
                     result = template.get('else')
@@ -369,7 +367,7 @@ class Flasher:
             elif not isinstance(result, list):
                 result = [result]
         else:
-            raise ValueError('Unknown: {}'.format(template))
+            raise ValueError(f'Unknown: {template}')
         return result
 
     def parse_argv(self, argv):
@@ -417,10 +415,12 @@ class Flasher:
         for key, value in vars(args).items():
             if key in self.option and value != getattr(self.option, key):
                 if isinstance(value, pathlib.Path):
-                    defaults.append('  {}: os.path.join(os.path.dirname(sys.argv[0]), {}),'.format(
-                        repr(key), repr(str(value))))
+                    defaults.append(
+                        f'  {repr(key)}: os.path.join(os.path.dirname(sys.argv[0]), {repr(str(value))}),'
+                    )
+
                 else:
-                    defaults.append('  {}: {},'.format(repr(key), repr(value)))
+                    defaults.append(f'  {repr(key)}: {repr(value)},')
 
         script = """
             import sys

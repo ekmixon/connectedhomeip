@@ -86,10 +86,7 @@ def parseTestPlan(filepath):
         else:
             is_pending_test = False
 
-    if is_pending_test == True:
-        return TestStatus.pending
-
-    return TestStatus.complete
+    return TestStatus.pending if is_pending_test == True else TestStatus.complete
 
 
 def parseYaml(filepath):
@@ -98,15 +95,20 @@ def parseYaml(filepath):
 
 
 def getPathFor(filename):
-    return path.join(path.dirname(__file__), filename + '.yaml')
+    return path.join(path.dirname(__file__), f'{filename}.yaml')
 
 
 def printSummaryFor(name, summary):
     count = summary[name]
     total = summary['total']
     percent = round(count/total*100, 2)
-    print(' * ' + name.ljust(10) + ': ' + str(count).rjust(3) +
-          ' (' + str(percent).rjust(5) + '%)')
+    print(
+        (
+            (f' * {name.ljust(10)}: {str(count).rjust(3)}' + ' (')
+            + str(percent).rjust(5)
+            + '%)'
+        )
+    )
 
 
 def printSummary(statuses):
@@ -130,7 +132,7 @@ def printUnknown(statuses):
         'Test_TC_'), listdir(path.dirname(__file__))))
     dir_test_names = [path.splitext(name)[0] for name in filtered]
 
-    known_test_names = [name for name in statuses]
+    known_test_names = list(statuses)
     unknown_test_names = list(
         filter(lambda name: name not in known_test_names, dir_test_names))
 
@@ -152,7 +154,7 @@ def main():
     checkPythonVersion()
 
     default_options = ArgOptions.summary.name
-    default_choices = [name for name in ArgOptions.__members__]
+    default_choices = list(ArgOptions.__members__)
 
     parser = argparse.ArgumentParser(
         description='Extract information from the set of certifications tests')

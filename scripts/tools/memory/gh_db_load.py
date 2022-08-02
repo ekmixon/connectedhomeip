@@ -56,7 +56,6 @@ GITHUB_CONFIG: ConfigDescription = {
 
 
 def main(argv):
-    status = 0
     try:
         sqlite_config = memdf.util.sqlite.CONFIG
         sqlite_config['database.file']['argparse']['required'] = True
@@ -88,8 +87,7 @@ def main(argv):
                 if cur.fetchone():
                     logging.debug('Skipping known artifact %d', a.id)
                     continue
-                blob = gh.download_artifact(a.id)
-                if blob:
+                if blob := gh.download_artifact(a.id):
                     logging.info('Adding artifact %d %s %s %s %s',
                                  a.id, a.commit[:12], a.pr, a.event, a.group)
                     db.add_sizes_from_zipfile(io.BytesIO(blob),
@@ -106,7 +104,7 @@ def main(argv):
     except Exception as exception:
         raise exception
 
-    return status
+    return 0
 
 
 if __name__ == '__main__':

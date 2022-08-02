@@ -84,7 +84,7 @@ class ErrorAccumulatingRule(LintRule):
         self._idl = None
 
     def _AddLintError(self, text, location):
-        self._lint_errors.append(LintError("%s: %s" % (self.name, text), location))
+        self._lint_errors.append(LintError(f"{self.name}: {text}", location))
 
     def _ParseLocation(self, meta: Optional[ParseMetaData]) -> Optional[LocationInFile]:
         """Create a location in the current file that is being parsed. """
@@ -146,11 +146,17 @@ class RequiredAttributesRule(ErrorAccumulatingRule):
             c for c in self._idl.clusters if c.name == name and c.side == ClusterSide.SERVER
         ]
         if not cluster_definition:
-            self._AddLintError("Cluster definition for %s not found" % cluster.name, location)
+            self._AddLintError(
+                f"Cluster definition for {cluster.name} not found", location
+            )
+
             return None
 
         if len(cluster_definition) > 1:
-            self._AddLintError("Multiple cluster definitions found for %s" % cluster.name, location)
+            self._AddLintError(
+                f"Multiple cluster definitions found for {cluster.name}", location
+            )
+
             return None
 
         return cluster_definition[0]
@@ -171,16 +177,20 @@ class RequiredAttributesRule(ErrorAccumulatingRule):
                 # cluster_definition contains the definition of the attributes themseves
                 #
                 # Join the two to receive attribute codes
-                name_to_code_map = {}
-                for attr in cluster_definition.attributes:
-                    name_to_code_map[attr.definition.name] = attr.definition.code
+                name_to_code_map = {
+                    attr.definition.name: attr.definition.code
+                    for attr in cluster_definition.attributes
+                }
 
                 attribute_codes = set()
                 # For all the instantiated attributes, figure out their code
                 for attr in cluster.attributes:
                     if attr.name not in name_to_code_map:
-                        self._AddLintError("Could not find attribute defintion (no code) for %s:%s" %
-                                           (cluster.name, attr.name), self._ParseLocation(cluster.parse_meta))
+                        self._AddLintError(
+                            f"Could not find attribute defintion (no code) for {cluster.name}:{attr.name}",
+                            self._ParseLocation(cluster.parse_meta),
+                        )
+
                         continue
 
                     attribute_codes.add(name_to_code_map[attr.name])
@@ -246,7 +256,7 @@ class RequiredCommandsRule(ErrorAccumulatingRule):
             if cluster.code not in self._mandatory_commands:
                 continue  # no known mandatory commands
 
-            defined_commands = set([c.code for c in cluster.commands])
+            defined_commands = {c.code for c in cluster.commands}
 
             for requirement in self._mandatory_commands[cluster.code]:
                 if requirement.command_code in defined_commands:

@@ -7503,10 +7503,10 @@ class ChipClusters:
         self._ChipStack = chipstack
 
     def GetClusterInfoById(self, cluster_id: int):
-        data = ChipClusters._CLUSTER_ID_DICT.get(cluster_id, None)
-        if not data:
+        if data := ChipClusters._CLUSTER_ID_DICT.get(cluster_id, None):
+            return data
+        else:
             raise UnknownCluster(cluster_id)
-        return data
 
     def ListClusterInfo(self):
         return ChipClusters._CLUSTER_NAME_DICT

@@ -157,13 +157,13 @@ def generate_header_tlv(args: object, payload_size: int, payload_digest: bytes):
     }
 
     if args.min_version is not None:
-        fields.update({HeaderTag.MIN_VERSION: uint(args.min_version)})
+        fields[HeaderTag.MIN_VERSION] = uint(args.min_version)
 
     if args.max_version is not None:
-        fields.update({HeaderTag.MAX_VERSION: uint(args.max_version)})
+        fields[HeaderTag.MAX_VERSION] = uint(args.max_version)
 
     if args.release_notes is not None:
-        fields.update({HeaderTag.RELEASE_NOTES_URL: args.release_notes})
+        fields[HeaderTag.RELEASE_NOTES_URL] = args.release_notes
 
     writer = TLVWriter()
     writer.put(None, fields)
@@ -197,10 +197,10 @@ def write_image(args: object, header: bytes):
         for path in args.input_files:
             with open(path, 'rb') as file:
                 while True:
-                    chunk = file.read(PAYLOAD_BUFFER_SIZE)
-                    if not chunk:
+                    if chunk := file.read(PAYLOAD_BUFFER_SIZE):
+                        out_file.write(chunk)
+                    else:
                         break
-                    out_file.write(chunk)
 
 
 def generate_image(args: object):
@@ -238,7 +238,7 @@ def show_header(args: object):
     print(f'Magic: {magic:x}')
     print(f'Total Size: {total_size}')
     print(f'Header Size: {header_size}')
-    print(f'Header TLV:')
+    print('Header TLV:')
 
     for tag in header_tlv:
         tag_name = HeaderTag(tag).name.replace('_', ' ').title()

@@ -43,7 +43,7 @@ def FindBinaryPath(name: str):
             continue
         return str(path)
 
-    return 'NOT_FOUND_IN_OUTPUT_' + name
+    return f'NOT_FOUND_IN_OUTPUT_{name}'
 
 
 # Supported log levels, mapping string values required for argument
@@ -118,7 +118,7 @@ def main(context, log_level, target, target_glob, target_skip_glob,
         chip_tool = FindBinaryPath('chip-tool')
 
     # Figures out selected test that match the given name(s)
-    all_tests = [test for test in chiptest.AllTests(chip_tool)]
+    all_tests = list(chiptest.AllTests(chip_tool))
 
     # Default to only non-manual tests unless explicit targets are specified.
     tests = list(filter(lambda test: not test.is_manual, all_tests))
@@ -127,8 +127,8 @@ def main(context, log_level, target, target_glob, target_skip_glob,
         for name in target:
             targeted = [test for test in all_tests if test.name.lower()
                         == name.lower()]
-            if len(targeted) == 0:
-                logging.error("Unknown target: %s" % name)
+            if not targeted:
+                logging.error(f"Unknown target: {name}")
             tests.extend(targeted)
 
     if target_glob:
@@ -136,10 +136,12 @@ def main(context, log_level, target, target_glob, target_skip_glob,
         # Globs ignore manual tests, because it's too easy to mess up otherwise.
         tests = [test for test in tests if matcher.matches(test.name.lower())]
 
-    if len(tests) == 0:
+    if not tests:
         logging.error("No targets match, exiting.")
-        logging.error("Valid targets are (case-insensitive): %s" %
-                      (", ".join(test.name for test in all_tests)))
+        logging.error(
+            f'Valid targets are (case-insensitive): {", ".join((test.name for test in all_tests))}'
+        )
+
         exit(1)
 
     if target_skip_glob:

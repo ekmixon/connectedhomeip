@@ -42,13 +42,16 @@ def read_su(config: Config, infile: IO) -> StackDF:
             """, re.VERBOSE)
     for line in infile:
         if match := decoder.match(line.strip()):
-            rows.append([
-                match.group('symbol'),
-                match.group('type'),
-                int(match.group('size')),
-                match.group('file'),
-                int(match.group('line')),
-            ])
+            rows.append(
+                [
+                    match['symbol'],
+                    match['type'],
+                    int(match['size']),
+                    match['file'],
+                    int(match['line']),
+                ]
+            )
+
     return StackDF(rows, columns=columns)
 
 
@@ -67,8 +70,5 @@ def read_dir(config: Config, dirname: str, method: str = None) -> DFs:
             if su_re.fullmatch(filename):
                 with open(os.path.join(path, filename), 'r') as fp:
                     frames.append(read_su(config, fp))
-    if frames:
-        df = StackDF(pd.concat(frames, ignore_index=True))
-    else:
-        df = StackDF()
+    df = StackDF(pd.concat(frames, ignore_index=True)) if frames else StackDF()
     return {StackDF.name: df}

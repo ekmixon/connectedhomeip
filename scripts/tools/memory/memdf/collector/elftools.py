@@ -34,13 +34,17 @@ CONFIG: ConfigDescription = {}
 def read_segments(config: Config, ef: ELFFile) -> SegmentDF:
     """Read a segment table from an ELFFile."""
     columns = ['type', 'vaddress', 'paddress', 'size', 'flags']
-    rows = []
-    for segment in ef.iter_segments():
-        rows.append([
+    rows = [
+        [
             segment['p_type'],
-            segment['p_vaddr'], segment['p_paddr'], segment['p_memsz'],
-            segment['p_flags']
-        ])
+            segment['p_vaddr'],
+            segment['p_paddr'],
+            segment['p_memsz'],
+            segment['p_flags'],
+        ]
+        for segment in ef.iter_segments()
+    ]
+
     return SegmentDF(rows, columns=columns)
 
 
@@ -51,11 +55,15 @@ def read_sections(config: Config, ef: ELFFile) -> SectionDF:
     rows = []
     for i, section in enumerate(ef.iter_sections()):
         index.append(i)
-        segment_number = -1
-        for j, segment in enumerate(ef.iter_segments()):
-            if segment.section_in_segment(section):
-                segment_number = j
-                break
+        segment_number = next(
+            (
+                j
+                for j, segment in enumerate(ef.iter_segments())
+                if segment.section_in_segment(section)
+            ),
+            -1,
+        )
+
         rows.append([
             section.name,
             elftools.elf.descriptions.describe_sh_type(section['sh_type']),
@@ -67,18 +75,18 @@ def read_sections(config: Config, ef: ELFFile) -> SectionDF:
 
 def read_symbols(config: Config, ef: ELFFile, sections: SectionDF) -> SymbolDF:
     """Read a symbol table from an ELFFile."""
-    section_map = dict(sections.section)
-    section_map.update({
+    section_map = dict(sections.section) | {
         0: memdf.name.UNDEF,
         'SHN_UNDEF': memdf.name.UNDEF,
-        'SHN_ABS': memdf.name.ABS
-    })
+        'SHN_ABS': memdf.name.ABS,
+    }
+
     columns = ['symbol', 'address', 'size', 'section', 'type', 'bind']
     rows = []
-    for section_id, section in enumerate(ef.iter_sections()):
+    for section in ef.iter_sections():
         if not isinstance(section, elftools.elf.sections.SymbolTableSection):
             continue
-        for symbol_id, symbol in enumerate(section.iter_symbols()):
+        for symbol in section.iter_symbols():
             st_type = elftools.elf.descriptions.describe_symbol_type(
                 symbol['st_info']['type'])
             st_bind = elftools.elf.descriptions.describe_symbol_bind(

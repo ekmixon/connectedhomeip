@@ -136,25 +136,19 @@ class Flasher(firmware_utils.Flasher):
         """Perform actions on the device according to self.option."""
         self.log(3, 'Options:', self.option)
 
-        if self.option.erase:
-            if self.erase().err:
-                return self
+        if self.option.erase and self.erase().err:
+            return self
 
         if self.option.application:
             application = self.option.application
             if self.flash(application).err:
                 return self
-            if self.option.verify_application:
-                if self.verify(application).err:
-                    return self
+            if self.option.verify_application and self.verify(application).err:
+                return self
             if self.option.reset is None:
                 self.option.reset = True
 
-        if self.option.reset:
-            if self.reset().err:
-                return self
-
-        return self
+        return self if self.option.reset and self.reset().err else self
 
 # Mobly integration
 
@@ -170,8 +164,8 @@ class Nrf5Platform:
 def verify_platform_args(platform_args):
     required_args = ['application']
     for r in required_args:
-        if not r in platform_args:
-            raise ValueError("Required argument %s missing" % r)
+        if r not in platform_args:
+            raise ValueError(f"Required argument {r} missing")
 
 
 def create_platform(platform_args):

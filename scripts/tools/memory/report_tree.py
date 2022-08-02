@@ -79,10 +79,7 @@ class SourceTree:
     def symbol_node(self, source: str, symbol: str,
                     size: int) -> 'SourceTree.Node':
         """Create a SourceTree node for a symbol."""
-        if source == symbol:
-            parent = self.root
-        else:
-            parent = self.source_node(source)
+        parent = self.root if source == symbol else self.source_node(source)
         node = self.Node(symbol, size, parent=parent)
         self.symbol_to_node[symbol] = node
         return node
@@ -96,21 +93,22 @@ class SourceTree:
 
     def truncate(self, limit: int) -> None:
         """Truncate tree at size limit."""
-        if limit:
-            for node in anytree.iterators.PostOrderIter(self.root):
-                if node.children:
-                    shown_count = 0
-                    hidden_size = 0
-                    for child in node.children:
-                        if child.size > limit:
-                            shown_count += 1
-                        else:
-                            hidden_size += child.size
-                            child.parent = None
-                    if shown_count and hidden_size:
-                        self.Node(memdf.name.OTHER,
-                                  size=hidden_size,
-                                  parent=node)
+        if not limit:
+            return
+        for node in anytree.iterators.PostOrderIter(self.root):
+            if node.children:
+                shown_count = 0
+                hidden_size = 0
+                for child in node.children:
+                    if child.size > limit:
+                        shown_count += 1
+                    else:
+                        hidden_size += child.size
+                        child.parent = None
+                if shown_count and hidden_size:
+                    self.Node(memdf.name.OTHER,
+                              size=hidden_size,
+                              parent=node)
 
     @staticmethod
     def from_symbols(config: Config, symbols: SymbolDF,
@@ -144,7 +142,6 @@ class SourceTree:
 
 
 def main(argv):
-    status = 0
     try:
         config = memdf.collect.parse_args(
             {
@@ -172,7 +169,7 @@ def main(argv):
     except Exception as exception:
         raise exception
 
-    return status
+    return 0
 
 
 if __name__ == '__main__':

@@ -28,9 +28,7 @@ def get(nd: Optional[Mapping], keys: Key, default: Any = None) -> Any:
         keys = keys[1:]
     if d is not None and d != {}:
         return d
-    if default is not None:
-        return default
-    return d
+    return default if default is not None else d
 
 
 def put(nd: MutableMapping, keys: Key, value: Any) -> None:

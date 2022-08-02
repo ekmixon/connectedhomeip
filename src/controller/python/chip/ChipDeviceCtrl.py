@@ -78,18 +78,10 @@ class NOCChain:
 def _IssueNOCChainCallbackPythonCallback(devCtrl, status: int, noc: c_void_p, nocLen: int, icac: c_void_p, icacLen: int, rcac: c_void_p, rcacLen: int, ipk: c_void_p, ipkLen: int, adminSubject: int):
     nocChain = NOCChain(None, None, None, None, 0)
     if status == 0:
-        nocBytes = None
-        if nocLen > 0:
-            nocBytes = string_at(noc, nocLen)[:]
-        icacBytes = None
-        if icacLen > 0:
-            icacBytes = string_at(icac, icacLen)[:]
-        rcacBytes = None
-        if rcacLen > 0:
-            rcacBytes = string_at(rcac, rcacLen)[:]
-        ipkBytes = None
-        if ipkLen > 0:
-            ipkBytes = string_at(ipk, ipkLen)[:]
+        nocBytes = string_at(noc, nocLen)[:] if nocLen > 0 else None
+        icacBytes = string_at(icac, icacLen)[:] if icacLen > 0 else None
+        rcacBytes = string_at(rcac, rcacLen)[:] if rcacLen > 0 else None
+        ipkBytes = string_at(ipk, ipkLen)[:] if ipkLen > 0 else None
         nocChain = NOCChain(nocBytes, icacBytes, rcacBytes, ipkBytes, adminSubject)
     devCtrl.NOCChainCallback(nocChain)
 
@@ -133,9 +125,19 @@ class ChipDeviceController():
         devCtrl = c_void_p(None)
 
         res = self._ChipStack.Call(
-            lambda: self._dmLib.pychip_OpCreds_AllocateController(ctypes.c_void_p(
-                opCredsContext), pointer(devCtrl), fabricIndex, fabricId, nodeId, ctypes.c_char_p(None if len(paaTrustStorePath) == 0 else str.encode(paaTrustStorePath)), useTestCommissioner)
+            lambda: self._dmLib.pychip_OpCreds_AllocateController(
+                ctypes.c_void_p(opCredsContext),
+                pointer(devCtrl),
+                fabricIndex,
+                fabricId,
+                nodeId,
+                ctypes.c_char_p(
+                    str.encode(paaTrustStorePath) if paaTrustStorePath else None
+                ),
+                useTestCommissioner,
+            )
         )
+
 
         if res != 0:
             raise self._ChipStack.ErrorToException(res)
@@ -257,10 +259,11 @@ class ChipDeviceController():
             lambda: self._dmLib.pychip_DeviceController_ConnectBLE(
                 self.devCtrl, discriminator, setupPinCode, nodeid)
         )
-        if not self._ChipStack.commissioningCompleteEvent.isSet():
-            # Error 50 is a timeout
-            return False
-        return self._ChipStack.commissioningEventRes == 0
+        return (
+            self._ChipStack.commissioningEventRes == 0
+            if self._ChipStack.commissioningCompleteEvent.isSet()
+            else False
+        )
 
     def CloseBLEConnection(self):
         self.CheckIsActive()
@@ -296,10 +299,11 @@ class ChipDeviceController():
             lambda: self._dmLib.pychip_DeviceController_Commission(
                 self.devCtrl, nodeid)
         )
-        if not self._ChipStack.commissioningCompleteEvent.isSet():
-            # Error 50 is a timeout
-            return False
-        return self._ChipStack.commissioningEventRes == 0
+        return (
+            self._ChipStack.commissioningEventRes == 0
+            if self._ChipStack.commissioningCompleteEvent.isSet()
+            else False
+        )
 
     def GetTestCommissionerUsed(self):
         return self._ChipStack.Call(
@@ -340,10 +344,11 @@ class ChipDeviceController():
             lambda: self._dmLib.pychip_DeviceController_ConnectWithCode(
                 self.devCtrl, setupPayload, nodeid)
         )
-        if not self._ChipStack.commissioningCompleteEvent.isSet():
-            # Error 50 is a timeout
-            return False
-        return self._ChipStack.commissioningEventRes == 0
+        return (
+            self._ChipStack.commissioningEventRes == 0
+            if self._ChipStack.commissioningCompleteEvent.isSet()
+            else False
+        )
 
     def CommissionIP(self, ipaddr: str, setupPinCode: int, nodeid: int):
         self.CheckIsActive()
@@ -358,10 +363,11 @@ class ChipDeviceController():
             lambda: self._dmLib.pychip_DeviceController_ConnectIP(
                 self.devCtrl, ipaddr.encode("utf-8"), setupPinCode, nodeid)
         )
-        if not self._ChipStack.commissioningCompleteEvent.isSet():
-            # Error 50 is a timeout
-            return False
-        return self._ChipStack.commissioningEventRes == 0
+        return (
+            self._ChipStack.commissioningEventRes == 0
+            if self._ChipStack.commissioningCompleteEvent.isSet()
+            else False
+        )
 
     def NOCChainCallback(self, nocChain):
         self._ChipStack.callbackRes = nocChain
@@ -660,7 +666,7 @@ class ChipDeviceController():
         cluster = None
         attribute = None
 
-        if pathTuple == ('*') or pathTuple == ():
+        if pathTuple in ['*', ()]:
             # Wildcard
             pass
         elif type(pathTuple) is not tuple:
@@ -730,10 +736,7 @@ class ChipDeviceController():
             else:
                 raise ValueError("Unsupported Event Path")
         else:
-            if pathTuple[0] == '*':
-                urgent = pathTuple[-1]
-                pass
-            else:
+            if pathTuple[0] != '*':
                 # endpoint + (cluster) event / endpoint + cluster
                 endpoint = pathTuple[0]
                 if issubclass(pathTuple[1], ClusterObjects.Cluster):
@@ -742,7 +745,7 @@ class ChipDeviceController():
                     event = pathTuple[1]
                 else:
                     raise ValueError("Unsupported Attribute Path")
-                urgent = pathTuple[-1]
+            urgent = pathTuple[-1]
         return ClusterAttribute.EventPath(
             EndpointId=endpoint, Cluster=cluster, Event=event, Urgent=urgent)
 

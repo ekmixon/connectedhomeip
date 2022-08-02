@@ -161,10 +161,14 @@ def check_int_range(value, min_value, max_value, name):
 
 def validate_args(args):
     # Validate the passcode
-    if args.passcode is not None:
-        if ((args.passcode < 0x0000001 and args.passcode > 0x5F5E0FE) or (args.passcode in INVALID_PASSCODES)):
-            logging.error('Invalid passcode:' + str(args.passcode))
-            sys.exit(1)
+    if args.passcode is not None and (
+        (
+            (args.passcode < 0x0000001 and args.passcode > 0x5F5E0FE)
+            or (args.passcode in INVALID_PASSCODES)
+        )
+    ):
+        logging.error(f'Invalid passcode:{str(args.passcode)}')
+        sys.exit(1)
 
     check_int_range(args.discriminator, 0x0000, 0x0FFF, 'Discriminator')
     check_int_range(args.product_id, 0x0000, 0xFFFF, 'Product id')
@@ -178,7 +182,7 @@ def validate_args(args):
     check_str_range(args.mfg_date, 8, 16, 'Manufacturing date')
     check_str_range(args.unique_id, 32, 32, 'Unique id')
 
-    logging.info('Discriminator:{} Passcode:{}'.format(args.discriminator, args.passcode))
+    logging.info(f'Discriminator:{args.discriminator} Passcode:{args.passcode}')
 
 
 def gen_spake2p_params(passcode):
@@ -254,9 +258,7 @@ def gen_raw_ec_keypair_from_der(key_file, pubkey_raw_file, privkey_raw_file):
 
 
 def generate_nvs_bin(args):
-    csv_content = 'key,type,encoding,value\n'
-    csv_content += 'chip-factory,namespace,,\n'
-
+    csv_content = 'key,type,encoding,value\n' + 'chip-factory,namespace,,\n'
     for k, v in FACTORY_DATA.items():
         if v['value'] is None:
             continue

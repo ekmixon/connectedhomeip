@@ -21,10 +21,7 @@ except:
 
 
 def parseNumberString(n):
-    if n.startswith('0x'):
-        return int(n[2:], 16)
-    else:
-        return int(n)
+    return int(n[2:], 16) if n.startswith('0x') else int(n)
 
 
 @dataclass
@@ -104,7 +101,7 @@ def DecodeClusterFromXml(element: xml.etree.ElementTree.Element):
 
 
 def ClustersInXmlFile(path: str):
-    logging.info("Loading XML from %s" % path)
+    logging.info(f"Loading XML from {path}")
 
     # root is expected to be just a "configurator" object
     configurator = xml.etree.ElementTree.parse(path).getroot()
@@ -143,10 +140,10 @@ class LintRulesContext:
             # Name may be a number. If this can be parsed as a number, accept it anyway
             try:
                 cluster_code = parseNumberString(name)
-                name = "ID_%s" % name
+                name = f"ID_{name}"
             except ValueError:
-                logging.error("UNKNOWN cluster name %s" % name)
-                logging.error("Known names: %s" % (",".join(self._cluster_codes.keys()), ))
+                logging.error(f"UNKNOWN cluster name {name}")
+                logging.error(f'Known names: {",".join(self._cluster_codes.keys())}')
                 return
         else:
             cluster_code = self._cluster_codes[name]
@@ -262,8 +259,9 @@ class Parser:
         self.file_name = file_name
 
     def parse(self):
-        data = LintRulesTransformer(self.file_name).transform(self.parser.parse(open(self.file_name, "rt").read()))
-        return data
+        return LintRulesTransformer(self.file_name).transform(
+            self.parser.parse(open(self.file_name, "rt").read())
+        )
 
 
 def CreateParser(file_name: str):

@@ -113,11 +113,11 @@ class ChipLogFormatter(logging.Formatter):
     ):
         fmt = "%(message)s"
         if logModulePrefix:
-            fmt = "CHIP:%(chip-module)s: " + fmt
+            fmt = f"CHIP:%(chip-module)s: {fmt}"
         if logLevel:
-            fmt = "%(levelname)s:" + fmt
+            fmt = f"%(levelname)s:{fmt}"
         if datefmt is not None or logTimestamp:
-            fmt = "%(asctime)s " + fmt
+            fmt = f"%(asctime)s {fmt}"
         super(ChipLogFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
         self.logMSecs = logMSecs
 
@@ -285,7 +285,7 @@ class ChipStack(object):
             moduleName = ChipUtility.CStringToString(moduleName)
             message = ChipUtility.CStringToString(message)
             if self.addModulePrefixToLogMessage:
-                message = "CHIP:%s: %s" % (moduleName, message)
+                message = f"CHIP:{moduleName}: {message}"
             logLevel = LogCategory.categoryToLogLevel(logCat)
             msgAttrs = {
                 "chip-module": moduleName,
@@ -340,9 +340,7 @@ class ChipStack(object):
         with self.networkLock:
             res = self.PostTaskOnChipThread(callFunct).Wait()
         self.completeEvent.set()
-        if res == 0 and self.callbackRes != None:
-            return self.callbackRes
-        return res
+        return self.callbackRes if res == 0 and self.callbackRes != None else res
 
     def CallAsync(self, callFunct):
         '''Run a Python function on CHIP stack, and wait for the application specific response.
@@ -382,31 +380,30 @@ class ChipStack(object):
         return callObj
 
     def ErrorToException(self, err, devStatusPtr=None):
-        if err == 0x2C and devStatusPtr:
-            devStatus = devStatusPtr.contents
-            msg = ChipUtility.CStringToString(
-                (
-                    self._ChipStackLib.pychip_Stack_StatusReportToString(
-                        devStatus.ProfileId, devStatus.StatusCode
-                    )
-                )
-            )
-            sysErrorCode = (
-                devStatus.SysErrorCode if (
-                    devStatus.SysErrorCode != 0) else None
-            )
-            if sysErrorCode != None:
-                msg = msg + " (system err %d)" % (sysErrorCode)
-            return DeviceError(
-                devStatus.ProfileId, devStatus.StatusCode, sysErrorCode, msg
-            )
-        else:
+        if err != 0x2C or not devStatusPtr:
             return ChipStackError(
                 err,
                 ChipUtility.CStringToString(
                     (self._ChipStackLib.pychip_Stack_ErrorToString(err))
                 ),
             )
+        devStatus = devStatusPtr.contents
+        msg = ChipUtility.CStringToString(
+            (
+                self._ChipStackLib.pychip_Stack_StatusReportToString(
+                    devStatus.ProfileId, devStatus.StatusCode
+                )
+            )
+        )
+        sysErrorCode = (
+            devStatus.SysErrorCode if (
+                devStatus.SysErrorCode != 0) else None
+        )
+        if sysErrorCode != None:
+            msg = msg + " (system err %d)" % (sysErrorCode)
+        return DeviceError(
+            devStatus.ProfileId, devStatus.StatusCode, sysErrorCode, msg
+        )
 
     def LocateChipDLL(self):
         if self._chipDLLPath:
@@ -426,8 +423,7 @@ class ChipStack(object):
         # running script looking for an CHIP build directory containing the Chip Device
         # Manager DLL. This makes it possible to import and use the ChipDeviceMgr module
         # directly from a built copy of the CHIP source tree.
-        buildMachineGlob = "%s-*-%s*" % (platform.machine(),
-                                         platform.system().lower())
+        buildMachineGlob = f"{platform.machine()}-*-{platform.system().lower()}*"
         relDMDLLPathGlob = os.path.join(
             "build",
             buildMachineGlob,
@@ -442,8 +438,7 @@ class ChipStack(object):
                     return self._chipDLLPath
 
         raise Exception(
-            "Unable to locate Chip Device Manager DLL (%s); expected location: %s"
-            % (ChipStackDLLBaseName, scriptDir)
+            f"Unable to locate Chip Device Manager DLL ({ChipStackDLLBaseName}); expected location: {scriptDir}"
         )
 
     # ----- Private Members -----
@@ -452,7 +447,7 @@ class ChipStack(object):
         while True:
             yield dir
             parent = os.path.dirname(dir)
-            if parent == "" or parent == dir:
+            if parent in ["", dir]:
                 break
             dir = parent
 

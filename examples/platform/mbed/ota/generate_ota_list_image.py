@@ -69,8 +69,7 @@ def CreateOtaListFile(config, imagePath):
 
 def main():
     if len(sys.argv) != 3:
-        print('Usage: ' + sys.argv[0] +
-              ' <mbed_config_json_file_path> <image_path>')
+        print((f'Usage: {sys.argv[0]}' + ' <mbed_config_json_file_path> <image_path>'))
         exit(1)
 
     config_json_path = sys.argv[1]

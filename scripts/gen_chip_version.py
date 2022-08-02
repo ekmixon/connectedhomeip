@@ -217,10 +217,17 @@ def main(argv):
         'chip_minor': options.chip_minor,
         'chip_patch': options.chip_patch,
         'chip_extra': options.chip_extra,
+        'chip_version': (
+            '%d.%d.%d%s'
+            % (
+                options.chip_major,
+                options.chip_minor,
+                options.chip_patch,
+                options.chip_extra,
+            )
+        ),
     }
 
-    template_args['chip_version'] = '%d.%d.%d%s' % (
-        options.chip_major, options.chip_minor, options.chip_patch, options.chip_extra)
 
     with open(options.output_file, 'w') as chip_version_file:
         chip_version_file.write(TEMPLATE % template_args)

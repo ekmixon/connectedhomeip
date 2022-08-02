@@ -17,12 +17,9 @@
 import sys
 import xmlrpc.client
 
-IP = '127.0.0.1'
 PORT = 9000
 
-if sys.platform == 'linux':
-    IP = '10.10.10.5'
-
+IP = '10.10.10.5' if sys.platform == 'linux' else '127.0.0.1'
 # sys.argv[1] contains the key to the apps register
-with xmlrpc.client.ServerProxy('http://' + IP + ':' + str(PORT) + '/', allow_none=True) as proxy:
+with xmlrpc.client.ServerProxy(f'http://{IP}:{PORT}/', allow_none=True) as proxy:
     proxy.factoryReset(sys.argv[1])

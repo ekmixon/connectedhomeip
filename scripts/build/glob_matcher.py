@@ -31,27 +31,22 @@ def _GlobMatch(glob: str, value: str) -> bool:
         if glob[0] == '?':
             glob, value = glob[1:], value[1:]
         elif glob[0] == '*':
-            for idx in range(len(value)+1):
-                if _GlobMatch(glob[1:], value[idx:]):
-                    return True
-            return False
+            return any(_GlobMatch(glob[1:], value[idx:]) for idx in range(len(value)+1))
         elif glob[0] == '{':
-            # Format is comma separated values between {}:
-            # NOTE: this does NOT support nested {} at the  moment
-            closing_idx = glob.find('}')
-            if not closing_idx:
+            if closing_idx := glob.find('}'):
+                return any(
+                    _GlobMatch(choice + glob[closing_idx + 1 :], value)
+                    for choice in glob[1:closing_idx].split(',')
+                )
+
+            else:
                 raise Exception("Malformed glob expression: missing '}'")
 
-            for choice in glob[1: closing_idx].split(','):
-                if _GlobMatch(choice + glob[closing_idx+1:], value):
-                    return True
-
-            return False
-        else:
-            if glob[0] != value[0]:
-                return False
+        elif glob[0] == value[0]:
             glob, value = glob[1:], value[1:]
 
+        else:
+            return False
     # if value is empty it has a chance to match subgroups
     if not value and glob.startswith('{') and glob.endswith('}'):
         for choice in glob[1: -1].split(','):

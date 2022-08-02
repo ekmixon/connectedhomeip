@@ -31,18 +31,20 @@ def GetUnionUnderlyingType(typeToCheck, matchingType=None):
         If that is 'None' (not to be confused with NoneType), then it will retrieve
         the 'real' type behind the union, i.e not Nullable && not None
     '''
-    if (not(typing.get_origin(typeToCheck) == typing.Union)):
+    if typing.get_origin(typeToCheck) != typing.Union:
         return None
 
-    for t in typing.get_args(typeToCheck):
-        if (matchingType is None):
-            if (t != type(None) and t != Nullable):
-                return t
-        else:
-            if (t == matchingType):
-                return t
-
-    return None
+    return next(
+        (
+            t
+            for t in typing.get_args(typeToCheck)
+            if (matchingType is None)
+            and t not in [type(None), Nullable]
+            or matchingType is not None
+            and (t == matchingType)
+        ),
+        None,
+    )
 
 
 @dataclass
@@ -100,8 +102,7 @@ class ClusterObjectFieldDescriptor:
             (elementType, ) = typing.get_args(elementType)
 
             for i, v in enumerate(val):
-                self._PutSingleElementToTLV(
-                    None, v, elementType, writer, debugPath + f'[{i}]')
+                self._PutSingleElementToTLV(None, v, elementType, writer, f'{debugPath}[{i}]')
             writer.endContainer()
 
 
@@ -110,16 +111,10 @@ class ClusterObjectDescriptor:
     Fields: List[ClusterObjectFieldDescriptor]
 
     def GetFieldByTag(self, tag: int) -> ClusterObjectFieldDescriptor:
-        for field in self.Fields:
-            if field.Tag == tag:
-                return field
-        return None
+        return next((field for field in self.Fields if field.Tag == tag), None)
 
     def GetFieldByLabel(self, label: str) -> ClusterObjectFieldDescriptor:
-        for field in self.Fields:
-            if field.Label == label:
-                return field
-        return None
+        return next((field for field in self.Fields if field.Label == label), None)
 
     def _ConvertNonArray(self, debugPath: str, elementType, value: Any) -> Any:
         if not issubclass(elementType, ClusterObject):
@@ -177,8 +172,7 @@ class ClusterObjectDescriptor:
         writer.startStructure(tag)
         for field in self.Fields:
             val = data.get(field.Label, None)
-            field.PutFieldToTLV(field.Tag, val, writer,
-                                debugPath + f'.{field.Label}')
+            field.PutFieldToTLV(field.Tag, val, writer, f'{debugPath}.{field.Label}')
         writer.endContainer()
 
     def DictToTLV(self, data: dict) -> bytes:
@@ -200,7 +194,7 @@ class ClusterObject:
         return cls.FromDict(data=cls.descriptor.TLVToDict(data))
 
     @ChipUtility.classproperty
-    def descriptor(cls):
+    def descriptor(self):
         raise NotImplementedError()
 
 
@@ -214,7 +208,7 @@ class ClusterCommand(ClusterObject):
         raise NotImplementedError()
 
     @ChipUtility.classproperty
-    def must_use_timed_invoke(cls) -> bool:
+    def must_use_timed_invoke(self) -> bool:
         return False
 
 
@@ -280,29 +274,37 @@ class ClusterAttributeDescriptor:
         raise NotImplementedError()
 
     @ChipUtility.classproperty
-    def attribute_type(cls) -> ClusterObjectFieldDescriptor:
+    def attribute_type(self) -> ClusterObjectFieldDescriptor:
         raise NotImplementedError()
 
     @ChipUtility.classproperty
-    def must_use_timed_write(cls) -> bool:
+    def must_use_timed_write(self) -> bool:
         return False
 
     @ChipUtility.classproperty
-    def _cluster_object(cls) -> ClusterObject:
-        return make_dataclass('InternalClass',
-                              [
-                                  ('Value', cls.attribute_type.Type,
-                                   field(default=None)),
-                                  ('descriptor', ClassVar[ClusterObjectDescriptor],
-                                   field(
-                                      default=ClusterObjectDescriptor(
-                                          Fields=[ClusterObjectFieldDescriptor(
-                                              Label='Value', Tag=0, Type=cls.attribute_type.Type)]
-                                      )
-                                  )
-                                  )
-                              ],
-                              bases=(ClusterObject,))
+    def _cluster_object(self) -> ClusterObject:
+        return make_dataclass(
+            'InternalClass',
+            [
+                ('Value', self.attribute_type.Type, field(default=None)),
+                (
+                    'descriptor',
+                    ClassVar[ClusterObjectDescriptor],
+                    field(
+                        default=ClusterObjectDescriptor(
+                            Fields=[
+                                ClusterObjectFieldDescriptor(
+                                    Label='Value',
+                                    Tag=0,
+                                    Type=self.attribute_type.Type,
+                                )
+                            ]
+                        )
+                    ),
+                ),
+            ],
+            bases=(ClusterObject,),
+        )
 
 
 class ClusterEvent(ClusterObject):

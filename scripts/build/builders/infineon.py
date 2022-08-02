@@ -87,16 +87,14 @@ class InfineonBuilder(GnBuilder):
         return ['p6_board="%s"' % self.board.GnArgName()]
 
     def build_outputs(self):
-        items = {
-            '%s.out' % self.app.AppNamePrefix():
-                os.path.join(self.output_dir, '%s.out' %
-                             self.app.AppNamePrefix()),
-            '%s.out.map' % self.app.AppNamePrefix():
-                os.path.join(self.output_dir,
-                             '%s.out.map' % self.app.AppNamePrefix()),
+        return {
+            f'{self.app.AppNamePrefix()}.out': os.path.join(
+                self.output_dir, f'{self.app.AppNamePrefix()}.out'
+            ),
+            f'{self.app.AppNamePrefix()}.out.map': os.path.join(
+                self.output_dir, f'{self.app.AppNamePrefix()}.out.map'
+            ),
         }
-
-        return items
 
     def flashbundle(self):
         with open(os.path.join(self.output_dir, self.app.FlashBundleName()), 'r') as fp:

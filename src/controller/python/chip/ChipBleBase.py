@@ -54,7 +54,7 @@ class ChipBleBase(metaclass=abc.ABCMeta):
         args = shlex.split(line)
         optParser = optparse.OptionParser(usage=optparse.SUPPRESS_USAGE)
 
-        if cmd == "scan" or cmd == "scan-connect":
+        if cmd in ["scan", "scan-connect"]:
             optParser.add_option(
                 "-t",
                 "--timeout",

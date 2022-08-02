@@ -47,19 +47,19 @@ class JavaBuildTest(unittest.TestCase):
     def testExpectedJarsCreated(self):
         jars_dir = JavaBuildTest.jars_dir
         for target in JavaBuildTest.targets_to_check:
-            self.assertTrue(path.exists(jars_dir + '/' + target + '.jar'))
+            self.assertTrue(path.exists(f'{jars_dir}/{target}.jar'))
 
         # Prebuilt jars should have been copied to the output directory.
-        self.assertTrue(path.exists(jars_dir + '/prebuilt_jar.jar'))
-        self.assertTrue(path.exists(jars_dir + '/child_jar.jar'))
+        self.assertTrue(path.exists(f'{jars_dir}/prebuilt_jar.jar'))
+        self.assertTrue(path.exists(f'{jars_dir}/child_jar.jar'))
 
     def testBuildConfigMatchesExpected(self):
         self.maxDiff = None
         configs_dir = JavaBuildTest.configs_dir
-        expected_dir = JavaBuildTest.test_dir + '/expected_output'
+        expected_dir = f'{JavaBuildTest.test_dir}/expected_output'
 
         for target in (JavaBuildTest.targets_to_check + JavaBuildTest.prebuilt_targets_to_check):
-            with open(expected_dir + '/' + target + '_expected.json', 'r') as expected_config, open(configs_dir + '/' + target + '.json', 'r') as actual_config:
+            with open(f'{expected_dir}/{target}_expected.json', 'r') as expected_config, open(f'{configs_dir}/{target}.json', 'r') as actual_config:
                 expected_json = json.load(expected_config)['deps_info']
                 actual_json = json.load(actual_config)['deps_info']
 

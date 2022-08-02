@@ -107,7 +107,7 @@ class K32WBuilder(GnBuilder):
     def build_outputs(self):
         items = {}
         for extension in ["", ".map", ".hex"]:
-            name = '%s%s' % (self.app.AppNamePrefix(), extension)
+            name = f'{self.app.AppNamePrefix()}{extension}'
             items[name] = os.path.join(self.output_dir, name)
 
         return items

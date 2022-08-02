@@ -30,7 +30,7 @@ class HelloWorldTest(base_test.BaseTestClass):
     def test_hello(self):
         expected = "hello!"
         status, payload = self.dut.rpcs().EchoService.Echo(msg=expected)
-        asserts.assert_true(status.ok(), "Status is %s" % status)
+        asserts.assert_true(status.ok(), f"Status is {status}")
         asserts.assert_equal(
             payload.msg,
             expected,

@@ -60,7 +60,7 @@ class FileSystemGeneratorStorage(GeneratorStorage):
         if not os.path.exists(target):
             return None
 
-        logging.info("Checking existing data in %s" % target)
+        logging.info(f"Checking existing data in {target}")
         with open(target, 'rt') as existing:
             return existing.read()
 
@@ -70,10 +70,10 @@ class FileSystemGeneratorStorage(GeneratorStorage):
         target = os.path.join(self.output_dir, relative_path)
         target_dir = os.path.dirname(target)
         if not os.path.exists(target_dir):
-            logging.info("Creating output directory: %s" % target_dir)
+            logging.info(f"Creating output directory: {target_dir}")
             os.makedirs(target_dir)
 
-        logging.info("Writing new data to: %s" % target)
+        logging.info(f"Writing new data to: {target}")
         with open(target, "wt") as out:
             out.write(content)
 
@@ -142,7 +142,7 @@ class CodeGenerator:
           output_file_name - File name that the template is to be generated to.
           vars             - variables used for template generation
         """
-        logging.info("File to be generated: %s" % output_file_name)
+        logging.info(f"File to be generated: {output_file_name}")
         if self.dry_run:
             return
 

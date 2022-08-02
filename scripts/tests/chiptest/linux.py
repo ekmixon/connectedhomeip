@@ -130,7 +130,7 @@ def CreateNamespacesForAppTest():
 def PrepareNamespacesForTestExecution(in_unshare: bool):
     if not in_unshare:
         EnsureNetworkNamespaceAvailability()
-    elif in_unshare:
+    else:
         EnsurePrivateState()
 
     CreateNamespacesForAppTest()

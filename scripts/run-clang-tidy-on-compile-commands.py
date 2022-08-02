@@ -52,12 +52,8 @@ class TidyResult:
         self.ok = ok
 
     def __repr__(self):
-        if self.ok:
-            status = "OK"
-        else:
-            status = "FAIL"
-
-        return "%s(%s)" % (status, self.path)
+        status = "OK" if self.ok else "FAIL"
+        return f"{status}({self.path})"
 
     def __str__(self):
         return self.__repr__()
@@ -96,7 +92,7 @@ class ClangTidyEntry:
             return
 
         if compiler in ['gcc', 'g++'] and gcc_sysroot:
-            self.clang_arguments.insert(0, '--sysroot='+gcc_sysroot)
+            self.clang_arguments.insert(0, f'--sysroot={gcc_sysroot}')
 
     @property
     def full_path(self):
@@ -114,7 +110,7 @@ class ClangTidyEntry:
         logging.debug("Running tidy on %s from %s", self.file, self.directory)
         try:
             cmd = ["clang-tidy", self.file] + \
-                self.tidy_arguments + ["--"] + self.clang_arguments
+                    self.tidy_arguments + ["--"] + self.clang_arguments
             logging.debug("Executing: %r" % cmd)
 
             proc = subprocess.Popen(
@@ -198,9 +194,9 @@ def find_darwin_gcc_sysroot():
         if not line.startswith('Path: '):
             continue
         path = line[line.find(': ')+2:]
-        if not '/MacOSX.platform/' in path:
+        if '/MacOSX.platform/' not in path:
             continue
-        logging.info("Found %s" % path)
+        logging.info(f"Found {path}")
         return path
 
     # A hard-coded value that works on default installations
@@ -225,7 +221,7 @@ class ClangTidyRunner:
             logging.info(
                 'Searching for a MacOS system root for gcc invocations...')
             self.gcc_sysroot = find_darwin_gcc_sysroot()
-            logging.info('  Chose: %s' % self.gcc_sysroot)
+            logging.info(f'  Chose: {self.gcc_sysroot}')
 
     def AddDatabase(self, compile_commands_json):
         database = json.load(open(compile_commands_json))
@@ -243,44 +239,47 @@ class ClangTidyRunner:
             self.entries.append(item)
 
     def Cleanup(self):
-        if self.fixes_temporary_file_dir:
-            all_diagnostics = []
+        if not self.fixes_temporary_file_dir:
+            return
+        all_diagnostics = []
 
-            # When running over several files, fixes may be applied to the same
-            # file over and over again, like 'append override' can result in the
-            # same override being appended multiple times.
-            already_seen = set()
-            for name in glob.iglob(
+        # When running over several files, fixes may be applied to the same
+        # file over and over again, like 'append override' can result in the
+        # same override being appended multiple times.
+        already_seen = set()
+        for name in glob.iglob(
                 os.path.join(self.fixes_temporary_file_dir.name, "*.yaml")
             ):
-                content = yaml.safe_load(open(name, "r"))
-                if not content:
-                    continue
-                diagnostics = content.get("Diagnostics", [])
+            content = yaml.safe_load(open(name, "r"))
+            if not content:
+                continue
+            diagnostics = content.get("Diagnostics", [])
 
                 # Allow all diagnostics for distinct paths to be applied
                 # at once but never again for future paths
-                for d in diagnostics:
-                    if d['DiagnosticMessage']['FilePath'] not in already_seen:
-                        all_diagnostics.append(d)
-
-                # in the future assume these files were already processed
-                for d in diagnostics:
-                    already_seen.add(d['DiagnosticMessage']['FilePath'])
-
-            if all_diagnostics:
-                with open(self.fixes_file, "w") as out:
-                    yaml.safe_dump(
-                        {"MainSourceFile": "", "Diagnostics": all_diagnostics}, out
-                    )
-            else:
-                open(self.fixes_file, "w").close()
-
-            logging.info(
-                "Cleaning up directory: %r", self.fixes_temporary_file_dir.name
+            all_diagnostics.extend(
+                d
+                for d in diagnostics
+                if d['DiagnosticMessage']['FilePath'] not in already_seen
             )
-            self.fixes_temporary_file_dir.cleanup()
-            self.fixes_temporary_file_dir = None
+
+            # in the future assume these files were already processed
+            for d in diagnostics:
+                already_seen.add(d['DiagnosticMessage']['FilePath'])
+
+        if all_diagnostics:
+            with open(self.fixes_file, "w") as out:
+                yaml.safe_dump(
+                    {"MainSourceFile": "", "Diagnostics": all_diagnostics}, out
+                )
+        else:
+            open(self.fixes_file, "w").close()
+
+        logging.info(
+            "Cleaning up directory: %r", self.fixes_temporary_file_dir.name
+        )
+        self.fixes_temporary_file_dir.cleanup()
+        self.fixes_temporary_file_dir = None
 
     def ExportFixesTo(self, f):
         # use absolute path since running things will change working directories

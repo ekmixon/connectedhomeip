@@ -48,21 +48,22 @@ class GnBuilder(Builder):
     def generate(self):
         if not os.path.exists(self.output_dir):
             cmd = [
-                'gn', 'gen', '--check', '--fail-on-unused-args',
+                'gn',
+                'gen',
+                '--check',
+                '--fail-on-unused-args',
                 '--export-compile-commands',
-                '--root=%s' % self.root
+                f'--root={self.root}',
             ]
 
-            extra_args = self.GnBuildArgs()
-            if extra_args:
-                cmd += ['--args=%s' % ' '.join(extra_args)]
+
+            if extra_args := self.GnBuildArgs():
+                cmd += [f"--args={' '.join(extra_args)}"]
 
             cmd += [self.output_dir]
 
-            title = 'Generating ' + self.identifier
-            extra_env = self.GnBuildEnv()
-
-            if extra_env:
+            title = f'Generating {self.identifier}'
+            if extra_env := self.GnBuildEnv():
                 # convert the command into a bash command that includes
                 # setting environment variables
                 cmd = [
@@ -79,4 +80,4 @@ class GnBuilder(Builder):
         if self.build_command:
             cmd.append(self.build_command)
 
-        self._Execute(cmd, title='Building ' + self.identifier)
+        self._Execute(cmd, title=f'Building {self.identifier}')

@@ -71,7 +71,7 @@ def print_check_revision_warning_message(current_revision, recommended_revision)
     recommended_revision_message = f"differs from the recommended ({recommended_revision})."
     allowed_message = "Please be aware that it may lead to encountering unexpected problems."
     update_message = "Consider updating NCS to the recommended revision, by calling:"
-    call_command_message = os.path.abspath(__file__) + " --update"
+    call_command_message = f"{os.path.abspath(__file__)} --update"
 
     # Get the longest message lenght, to fit warning frame size.
     longest_message_len = max([len(current_revision_message), len(recommended_revision_message), len(

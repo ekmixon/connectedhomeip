@@ -89,7 +89,7 @@ class App:
     def wait(self, timeout=None):
         while True:
             # If the App was never started, wait cannot be called on the process
-            if self.process == None:
+            if self.process is None:
                 time.sleep(0.1)
                 continue
             code = self.process.wait(timeout)
@@ -110,14 +110,14 @@ class App:
         else:
             logging.debug('Executing application under test with the following args:')
             for key, value in self.options.items():
-                logging.debug('   %s: %s' % (key, value))
+                logging.debug(f'   {key}: {value}')
                 app_cmd = app_cmd + [key, value]
                 if key == '--KVS':
                     self.kvsPathSet.add(value)
         return runner.RunSubprocess(app_cmd, name='APP ', wait=False)
 
     def __waitFor(self, waitForString, server_process, outpipe):
-        logging.debug('Waiting for %s' % waitForString)
+        logging.debug(f'Waiting for {waitForString}')
 
         start_time = time.monotonic()
         ready, self.lastLogIndex = outpipe.CapturedLogContains(
@@ -129,18 +129,18 @@ class App:
                 logging.error(died_str)
                 raise Exception(died_str)
             if time.monotonic() - start_time > 10:
-                raise Exception('Timeout while waiting for %s' % waitForString)
+                raise Exception(f'Timeout while waiting for {waitForString}')
             time.sleep(0.1)
             ready, self.lastLogIndex = outpipe.CapturedLogContains(
                 waitForString, self.lastLogIndex)
 
-        logging.debug('Success waiting for: %s' % waitForString)
+        logging.debug(f'Success waiting for: {waitForString}')
 
     def __updateSetUpCode(self):
-        qrLine = self.outpipe.FindLastMatchingLine('.*SetupQRCode: *\\[(.*)]')
-        if not qrLine:
+        if qrLine := self.outpipe.FindLastMatchingLine('.*SetupQRCode: *\\[(.*)]'):
+            self.setupCode = qrLine.group(1)
+        else:
             raise Exception("Unable to find QR code")
-        self.setupCode = qrLine.group(1)
 
 
 class TestTarget(Enum):
@@ -234,11 +234,7 @@ class TestDefinition:
                     continue
 
                 # For the app indicated by self.target, give it the 'default' key to add to the register
-                if path == target_app:
-                    key = 'default'
-                else:
-                    key = os.path.basename(path[-1])
-
+                key = 'default' if path == target_app else os.path.basename(path[-1])
                 app = App(runner, path)
                 # Add the App to the register immediately, so if it fails during
                 # start() we will be able to clean things up properly.

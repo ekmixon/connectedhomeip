@@ -56,9 +56,7 @@ class PartitionCreator:
 
         """
         if self.__data_to_save:
-            # prepare raw data from Json
-            cbor_data = cbor.dumps(self.__data_to_save)
-            return cbor_data
+            return cbor.dumps(self.__data_to_save)
 
     def create_hex(self, data: bytes):
         """
@@ -67,9 +65,12 @@ class PartitionCreator:
 
         """
         if len(data) > self._length:
-            raise ValueError("generated CBOR file exceeds declared maximum partition size! {} > {}".format(len(data), self._length))
+            raise ValueError(
+                f"generated CBOR file exceeds declared maximum partition size! {len(data)} > {self._length}"
+            )
+
         self._ih.putsz(self._offset, data)
-        self._ih.write_hex_file(self._output + ".hex", True)
+        self._ih.write_hex_file(f"{self._output}.hex", True)
         self._data_ready = True
         return True
 
@@ -81,7 +82,7 @@ class PartitionCreator:
         if not self._data_ready:
             log.error("Please create hex file first!")
             return False
-        self._ih.tobinfile(self._output + ".bin")
+        self._ih.tobinfile(f"{self._output}.bin")
         return True
 
     @staticmethod
@@ -94,10 +95,10 @@ class PartitionCreator:
 
         If "key_value" of data entry is a dictionary, algorithm appends it to the created dictionary.
         """
-        output_dict = dict()
+        output_dict = {}
         for entry in data:
             if not isinstance(entry, dict):
-                log.debug("Processing entry {}".format(entry))
+                log.debug(f"Processing entry {entry}")
                 if isinstance(data[entry], str) and data[entry].startswith(HEX_PREFIX):
                     output_dict[entry] = codecs.decode(data[entry][len(HEX_PREFIX):], "hex")
                 elif isinstance(data[entry], str):
@@ -118,7 +119,7 @@ class PartitionCreator:
             with open(self._input, "rb") as json_file:
                 return json.loads(json_file.read())
         except IOError as e:
-            log.error("Can not read Json file {}".format(self._input))
+            log.error(f"Can not read Json file {self._input}")
             raise e
 
 
@@ -165,9 +166,12 @@ def main():
     try:
         if not args.raw:
             print("Generating .hex file: {}.hex with offset: {} and size: {}".format(args.output, hex(args.offset), hex(args.size)))
-        if partition_creator.create_hex(cbor_data) and partition_creator.create_bin():
-            if not args.raw:
-                print_flashing_help()
+        if (
+            partition_creator.create_hex(cbor_data)
+            and partition_creator.create_bin()
+            and not args.raw
+        ):
+            print_flashing_help()
     except ValueError as e:
         log.error(e)
         sys.exit(-1)

@@ -60,38 +60,30 @@ def parse_paa_root_certs(cmdpipe, paa_list):
 
     result = {}
 
-    while True:
-        line = cmdpipe.stdout.readline()
-        if not line:
-            break
-        else:
-            if b': ' in line:
-                key, value = line.split(b': ')
-                result[key.strip(b' -')] = value.strip()
-                parse_paa_root_certs.counter += 1
-                if parse_paa_root_certs.counter % 2 == 0:
-                    paa_list.append(copy.deepcopy(result))
+    while line := cmdpipe.stdout.readline():
+        if b': ' in line:
+            key, value = line.split(b': ')
+            result[key.strip(b' -')] = value.strip()
+            parse_paa_root_certs.counter += 1
+            if parse_paa_root_certs.counter % 2 == 0:
+                paa_list.append(copy.deepcopy(result))
 
 
 def write_paa_root_cert(cmdpipe, subject):
     filename = 'paa-root-certs/dcld_mirror_' + \
         re.sub('[^a-zA-Z0-9_-]', '', re.sub('[=, ]', '_', subject))
-    with open(filename + '.pem', 'wb+') as outfile:
-        while True:
-            line = cmdpipe.stdout.readline()
-            if not line:
-                break
-            else:
-                if b'pem_cert: |' in line:
-                    while True:
-                        line = cmdpipe.stdout.readline()
-                        outfile.write(line.strip(b' \t'))
-                        if b'-----END CERTIFICATE-----' in line:
-                            break
+    with open(f'{filename}.pem', 'wb+') as outfile:
+        while line := cmdpipe.stdout.readline():
+            if b'pem_cert: |' in line:
+                while True:
+                    line = cmdpipe.stdout.readline()
+                    outfile.write(line.strip(b' \t'))
+                    if b'-----END CERTIFICATE-----' in line:
+                        break
     # convert pem file to der
-    with open(filename + '.pem', 'rb') as infile:
+    with open(f'{filename}.pem', 'rb') as infile:
         pem_certificate = x509.load_pem_x509_certificate(infile.read())
-    with open(filename + '.der', 'wb+') as outfile:
+    with open(f'{filename}.der', 'wb+') as outfile:
         der_certificate = pem_certificate.public_bytes(
             serialization.Encoding.DER)
         outfile.write(der_certificate)

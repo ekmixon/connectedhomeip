@@ -25,9 +25,7 @@ def target_for_name(name: str):
         return TestTarget.TV
     if name.startswith('DL_') or name.startswith('Test_TC_DL_'):
         return TestTarget.LOCK
-    if name.startswith('OTA_'):
-        return TestTarget.OTA
-    return TestTarget.ALL_CLUSTERS
+    return TestTarget.OTA if name.startswith('OTA_') else TestTarget.ALL_CLUSTERS
 
 
 def tests_with_command(chip_tool: str, is_manual: bool):
@@ -50,11 +48,8 @@ def tests_with_command(chip_tool: str, is_manual: bool):
 
 
 def AllTests(chip_tool: str):
-    for test in tests_with_command(chip_tool, is_manual=False):
-        yield test
-
-    for test in tests_with_command(chip_tool, is_manual=True):
-        yield test
+    yield from tests_with_command(chip_tool, is_manual=False)
+    yield from tests_with_command(chip_tool, is_manual=True)
 
 
 __all__ = [

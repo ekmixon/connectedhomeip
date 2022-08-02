@@ -18,11 +18,9 @@ import sys
 import threading
 from xmlrpc.server import SimpleXMLRPCServer
 
-IP = '127.0.0.1'
 PORT = 9000
 
-if sys.platform == 'linux':
-    IP = '10.10.10.5'
+IP = '10.10.10.5' if sys.platform == 'linux' else '127.0.0.1'
 
 
 class AppsRegister:
@@ -53,8 +51,7 @@ class AppsRegister:
         return self.__accessories[name]
 
     def kill(self, name):
-        accessory = self.__accessories[name]
-        if accessory:
+        if accessory := self.__accessories[name]:
             accessory.kill()
 
     def killAll(self):
@@ -62,8 +59,7 @@ class AppsRegister:
             accessory.kill()
 
     def start(self, name, args):
-        accessory = self.__accessories[name]
-        if accessory:
+        if accessory := self.__accessories[name]:
             # The args param comes directly from the sys.argv[2:] of Start.py and should contain a list of strings in
             # key-value pair, e.g. [option1, value1, option2, value2, ...]
             options = self.__createCommandLineOptions(args)
@@ -71,14 +67,10 @@ class AppsRegister:
         return False
 
     def stop(self, name):
-        accessory = self.__accessories[name]
-        if accessory:
-            return accessory.stop()
-        return False
+        return accessory.stop() if (accessory := self.__accessories[name]) else False
 
     def reboot(self, name):
-        accessory = self.__accessories[name]
-        if accessory:
+        if accessory := self.__accessories[name]:
             return accessory.stop() and accessory.start()
         return False
 
@@ -87,14 +79,12 @@ class AppsRegister:
             accessory.factoryReset()
 
     def factoryReset(self, name):
-        accessory = self.__accessories[name]
-        if accessory:
+        if accessory := self.__accessories[name]:
             return accessory.factoryReset()
         return False
 
     def waitForMessage(self, name, message):
-        accessory = self.__accessories[name]
-        if accessory:
+        if accessory := self.__accessories[name]:
             # The message param comes directly from the sys.argv[2:] of WaitForMessage.py and should contain a list of strings that
             # comprise the entire message to wait for
             return accessory.waitForMessage(' '.join(message))
@@ -124,6 +114,4 @@ class AppsRegister:
             logging.warning("Unexpected command line options %r - not key/value pairs (odd length)" % (args,))
             return {}
 
-        # Create a dictionary from the key-value pair list
-        options = {args[i]: args[i+1] for i in range(0, len(args), 2)}
-        return options
+        return {args[i]: args[i+1] for i in range(0, len(args), 2)}

@@ -296,8 +296,7 @@ class Flasher(firmware_utils.Flasher):
         """
         config_map = {}
         for key, info in vars(self.info).items():
-            config_key = info.get('sdkconfig')
-            if config_key:
+            if config_key := info.get('sdkconfig'):
                 config_map[config_key] = key
         result = {}
         with open(filename) as f:
@@ -314,8 +313,7 @@ class Flasher(firmware_utils.Flasher):
 
     def locate_tool(self, tool):
         if tool in self.IDF_PATH_TOOLS:
-            idf_path = os.environ.get('IDF_PATH')
-            if idf_path:
+            if idf_path := os.environ.get('IDF_PATH'):
                 return os.path.join(idf_path, self.IDF_PATH_TOOLS[tool])
         return super().locate_tool(tool)
 
@@ -395,32 +393,31 @@ class Flasher(firmware_utils.Flasher):
             namespace_defaults(args, self.read_sdkconfig(args.use_sdkconfig))
         parttool = args.use_parttool or args.parttool
         partfile = args.use_partition_file or args.partition
-        if parttool and partfile:
-            # Get unspecified offsets from the partition file now,
-            # so that parttool isn't needed at flashing time.
-            if args.application and args.application_offset is None:
-                args.application_offset = self.get_partition_info(
-                    'application', 'offset',
-                    {'parttool': parttool, 'partition': partfile})
+        if (
+            parttool
+            and partfile
+            and args.application
+            and args.application_offset is None
+        ):
+            args.application_offset = self.get_partition_info(
+                'application', 'offset',
+                {'parttool': parttool, 'partition': partfile})
 
     def actions(self):
         """Perform actions on the device according to self.option."""
         self.log(3, 'Options:', self.option)
 
-        if self.option.erase:
-            if self.erase().err:
-                return self
+        if self.option.erase and self.erase().err:
+            return self
 
         if self.option.application:
-            application = self.option.application
-            bootloader = self.option.bootloader
             partition = self.option.partition
 
             # Collect the flashable items.
             flash = []
-            if bootloader:
+            if bootloader := self.option.bootloader:
                 flash += [self.option.bootloader_offset, bootloader]
-            if application:
+            if application := self.option.application:
                 offset = self.option.application_offset
                 if offset is None:
                     offset = self.get_partition_info('application', 'offset')
@@ -428,9 +425,6 @@ class Flasher(firmware_utils.Flasher):
             if partition:
                 flash += [self.option.partition_offset, partition]
 
-            # esptool.py doesn't have an independent reset command, so we add
-            # an `--after` option to the final operation, which may be either
-            # flash or verify.
             if self.option.after is None:
                 if self.option.reset or self.option.reset is None:
                     self.option.after = 'hard_reset'
@@ -477,9 +471,8 @@ def verify_platform_args(platform_args):
         'partition_offset',
         'application_offset',
     ]
-    difference = set(required_args) - set(platform_args)
-    if difference:
-        raise ValueError("Required arguments missing: %s" % difference)
+    if difference := set(required_args) - set(platform_args):
+        raise ValueError(f"Required arguments missing: {difference}")
 
 
 def create_platform(platform_args):

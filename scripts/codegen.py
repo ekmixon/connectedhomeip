@@ -107,7 +107,7 @@ def main(log_level, generator, output_dir, dry_run, name_only, idl_path):
     """
     coloredlogs.install(level=__LOG_LEVELS__[
                         log_level], fmt='%(asctime)s %(levelname)-7s %(message)s')
-    logging.info("Parsing idl from %s" % idl_path)
+    logging.info(f"Parsing idl from {idl_path}")
     idl_tree = CreateParser().parse(open(idl_path, "rt").read())
 
     if name_only:
@@ -115,7 +115,7 @@ def main(log_level, generator, output_dir, dry_run, name_only, idl_path):
     else:
         storage = FileSystemGeneratorStorage(output_dir)
 
-    logging.info("Running code generator %s" % generator)
+    logging.info(f"Running code generator {generator}")
     generator = __GENERATORS__[
         generator].CreateGenerator(storage, idl=idl_tree)
     generator.render(dry_run)

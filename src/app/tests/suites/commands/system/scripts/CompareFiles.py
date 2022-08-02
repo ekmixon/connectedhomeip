@@ -23,7 +23,7 @@ file2 = sys.argv[2]
 
 def main():
     if filecmp.cmp(file1, file2, shallow=False) is False:
-        raise Exception('Files %s and %s do not match' % (file1, file2))
+        raise Exception(f'Files {file1} and {file2} do not match')
 
 
 if __name__ == "__main__":

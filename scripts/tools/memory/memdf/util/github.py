@@ -36,8 +36,8 @@ def postprocess_config(config: Config, _key: str, _info: Mapping) -> None:
         config.put('github.repo', repo)
         if not config['github.token']:
             config['github.token'] = os.environ.get('GITHUB_TOKEN')
-            if not config['github.token']:
-                logging.error('Missing --github-token')
+        if not config['github.token']:
+            logging.error('Missing --github-token')
 
 
 CONFIG: ConfigDescription = {
@@ -135,8 +135,7 @@ class Gh:
                     per_page):
                 if not i.artifacts:
                     break
-                for a in i.artifacts:
-                    yield a
+                yield from i.artifacts
                 page += 1
                 logging.debug('ASP: artifact page %d of %d', page, page_limit)
                 if page_limit and page >= page_limit:

@@ -138,25 +138,18 @@ class Flasher(firmware_utils.Flasher):
         """Perform actions on the device according to self.option."""
         self.log(3, 'Options:', self.option)
 
-        if self.option.erase:
-            if self.erase().err:
-                return self
+        if self.option.erase and self.erase().err:
+            return self
 
-        application = self.optional_file(self.option.application)
-        if application:
+        if application := self.optional_file(self.option.application):
             if self.flash(application).err:
                 return self
-            if self.option.verify_application:
-                if self.verify(application).err:
-                    return self
+            if self.option.verify_application and self.verify(application).err:
+                return self
             if self.option.reset is None:
                 self.option.reset = True
 
-        if self.option.reset:
-            if self.reset().err:
-                return self
-
-        return self
+        return self if self.option.reset and self.reset().err else self
 
 
 if __name__ == '__main__':

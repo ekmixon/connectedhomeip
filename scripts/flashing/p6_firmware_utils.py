@@ -123,29 +123,20 @@ class Flasher(firmware_utils.Flasher):
         """Perform actions on the device according to self.option."""
         self.log(3, 'Options:', self.option)
 
-        if self.option.erase:
-            if self.erase().err:
-                return self
+        if self.option.erase and self.erase().err:
+            return self
 
         if self.option.application:
             application = self.option.application
             if self.flash(application).err:
                 return self
-            if self.option.verify_application:
-                if self.verify(application).err:
-                    return self
-
-        if self.option.reset:
-            if self.reset().err:
+            if self.option.verify_application and self.verify(application).err:
                 return self
 
-        return self
+        return self if self.option.reset and self.reset().err else self
 
     def locate_tool(self, tool):
-        if tool == "make":
-            return which("make")
-        else:
-            return tool
+        return which("make") if tool == "make" else tool
 
 
 if __name__ == '__main__':

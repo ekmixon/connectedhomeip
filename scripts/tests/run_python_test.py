@@ -41,7 +41,7 @@ MATTER_DEVELOPMENT_PAA_ROOT_CERTS = "credentials/development/paa-root-certs"
 def EnqueueLogOutput(fp, tag, q):
     for line in iter(fp.readline, b''):
         timestamp = time.time()
-        if len(line) > len('[1646290606.901990]') and line[0:1] == b'[':
+        if len(line) > len('[1646290606.901990]') and line[:1] == b'[':
             try:
                 timestamp = float(line[1:18].decode())
                 line = line[19:]
@@ -87,15 +87,19 @@ def main(app: str, factoryreset: bool, app_args: str, script: str, script_args: 
 
     app_process = None
     if app:
-        if not os.path.exists(app):
-            if app is None:
-                raise FileNotFoundError(f"{app} not found")
+        if not os.path.exists(app) and app is None:
+            raise FileNotFoundError(f"{app} not found")
         app_args = [app] + shlex.split(app_args)
         logging.info(f"Execute: {app_args}")
         app_process = subprocess.Popen(
             app_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
         DumpProgramOutputToQueue(
-            log_cooking_threads, Fore.GREEN + "APP " + Style.RESET_ALL, app_process, log_queue)
+            log_cooking_threads,
+            f"{Fore.GREEN}APP {Style.RESET_ALL}",
+            app_process,
+            log_queue,
+        )
+
 
     script_command = [script, "--paa-trust-store-path", os.path.join(DEFAULT_CHIP_ROOT, MATTER_DEVELOPMENT_PAA_ROOT_CERTS),
                       '--log-format', '%(message)s'] + shlex.split(script_args)
@@ -108,8 +112,13 @@ def main(app: str, factoryreset: bool, app_args: str, script: str, script_args: 
     logging.info(f"Execute: {script_command}")
     test_script_process = subprocess.Popen(
         script_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    DumpProgramOutputToQueue(log_cooking_threads, Fore.GREEN + "TEST" + Style.RESET_ALL,
-                             test_script_process, log_queue)
+    DumpProgramOutputToQueue(
+        log_cooking_threads,
+        f"{Fore.GREEN}TEST{Style.RESET_ALL}",
+        test_script_process,
+        log_queue,
+    )
+
 
     test_script_exit_code = test_script_process.wait()
 

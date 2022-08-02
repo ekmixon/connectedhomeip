@@ -24,7 +24,7 @@ import os
 
 CHIP_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-ALL_PLATFORMS = set([
+ALL_PLATFORMS = {
     'ameba',
     'android',
     'bl602',
@@ -44,7 +44,8 @@ ALL_PLATFORMS = set([
     'tizen',
     'webos',
     'mw320',
-])
+}
+
 
 Module = namedtuple('Module', 'name path platforms')
 

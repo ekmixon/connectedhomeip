@@ -163,8 +163,7 @@ class SizeContext:
 
         # Download and add required artifacts.
         for i in required_artifact_ids:
-            blob = self.gh.download_artifact(i)
-            if blob:
+            if blob := self.gh.download_artifact(i):
                 self.db.add_sizes_from_zipfile(io.BytesIO(blob),
                                                {'artifact': i})
 
@@ -285,15 +284,17 @@ class SizeContext:
             }
             dfs[df.attrs['name']] = df
 
-            if (event == 'pull_request' and comment_enabled
-                    and (comment_limit == 0 or comment_limit > comment_count)):
-                if self.post_change_report(df):
-                    # Mark the originating builds, and remove the originating
-                    # artifacts, so that they don't generate duplicate report
-                    # comments.
-                    self.db.set_commented(df.attrs['builds'])
-                    self.gh.delete_artifacts(df.attrs['artifacts'])
-                    comment_count += 1
+            if (
+                event == 'pull_request'
+                and comment_enabled
+                and (comment_limit == 0 or comment_limit > comment_count)
+            ) and self.post_change_report(df):
+                # Mark the originating builds, and remove the originating
+                # artifacts, so that they don't generate duplicate report
+                # comments.
+                self.db.set_commented(df.attrs['builds'])
+                self.gh.delete_artifacts(df.attrs['artifacts'])
+                comment_count += 1
         return dfs
 
 
@@ -383,7 +384,6 @@ class V1Comment:
 
 
 def main(argv):
-    status = 0
     try:
         config = Config().init({
             **memdf.util.config.CONFIG,
@@ -410,7 +410,7 @@ def main(argv):
     except Exception as exception:
         raise exception
 
-    return status
+    return 0
 
 
 if __name__ == '__main__':

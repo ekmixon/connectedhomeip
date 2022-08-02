@@ -33,11 +33,15 @@ class Context:
         combination.
         """
 
-        self.builders = []
-        for target in targets:
-            self.builders.append(target.Create(
-                self.runner, self.repository_path, self.output_prefix,
-                enable_flashbundle))
+        self.builders = [
+            target.Create(
+                self.runner,
+                self.repository_path,
+                self.output_prefix,
+                enable_flashbundle,
+            )
+            for target in targets
+        ]
 
         # whenever builders change, assume generation is required again
         self.completed_steps.discard(BuildSteps.GENERATED)

@@ -30,13 +30,13 @@ class AndroidBoard(Enum):
     AndroidStudio_X86 = auto()
 
     def TargetCpuName(self):
-        if self == AndroidBoard.ARM or self == AndroidBoard.AndroidStudio_ARM:
+        if self in [AndroidBoard.ARM, AndroidBoard.AndroidStudio_ARM]:
             return 'arm'
-        elif self == AndroidBoard.ARM64 or self == AndroidBoard.AndroidStudio_ARM64:
+        elif self in [AndroidBoard.ARM64, AndroidBoard.AndroidStudio_ARM64]:
             return 'arm64'
-        elif self == AndroidBoard.X64 or self == AndroidBoard.AndroidStudio_X64:
+        elif self in [AndroidBoard.X64, AndroidBoard.AndroidStudio_X64]:
             return 'x64'
-        elif self == AndroidBoard.X86 or self == AndroidBoard.AndroidStudio_X86:
+        elif self in [AndroidBoard.X86, AndroidBoard.AndroidStudio_X86]:
             return 'x86'
         else:
             raise Exception('Unknown board type: %r' % self)
@@ -54,11 +54,12 @@ class AndroidBoard(Enum):
             raise Exception('Unknown board type: %r' % self)
 
     def IsIde(self):
-        if (self == AndroidBoard.AndroidStudio_ARM or self == AndroidBoard.AndroidStudio_ARM64
-                or self == AndroidBoard.AndroidStudio_X64 or self == AndroidBoard.AndroidStudio_X86):
-            return True
-        else:
-            return False
+        return self in [
+            AndroidBoard.AndroidStudio_ARM,
+            AndroidBoard.AndroidStudio_ARM64,
+            AndroidBoard.AndroidStudio_X64,
+            AndroidBoard.AndroidStudio_X86,
+        ]
 
 
 class AndroidApp(Enum):
@@ -81,9 +82,7 @@ class AndroidApp(Enum):
 
     def AppGnArgs(self):
         gn_args = {}
-        if self == AndroidApp.CHIP_TVServer:
-            gn_args['chip_config_network_layer_ble'] = False
-        elif self == AndroidApp.CHIP_TV_CASTING_APP:
+        if self in [AndroidApp.CHIP_TVServer, AndroidApp.CHIP_TV_CASTING_APP]:
             gn_args['chip_config_network_layer_ble'] = False
         return gn_args
 
@@ -112,8 +111,7 @@ class AndroidBuilder(Builder):
     def validate_build_environment(self):
         for k in ['ANDROID_NDK_HOME', 'ANDROID_HOME']:
             if k not in os.environ:
-                raise Exception(
-                    'Environment %s missing, cannot build android libraries' % k)
+                raise Exception(f'Environment {k} missing, cannot build android libraries')
 
         # SDK manager must be runnable to 'accept licenses'
         sdk_manager = os.path.join(os.environ['ANDROID_HOME'], 'tools', 'bin',
@@ -154,8 +152,11 @@ class AndroidBuilder(Builder):
             self.root, 'src/android/', self.app.AppName(), 'app/libs/jniLibs', self.board.AbiName())
         libs_dir = os.path.join(
             self.root, 'src/android/', self.app.AppName(), 'app/libs')
-        self._Execute(['mkdir', '-p', jnilibs_dir],
-                      title='Prepare Native libs ' + self.identifier)
+        self._Execute(
+            ['mkdir', '-p', jnilibs_dir],
+            title=f'Prepare Native libs {self.identifier}',
+        )
+
 
         # TODO: Runtime dependencies should be computed by the build system rather than hardcoded
         # GN supports getting these dependencies like:
@@ -176,7 +177,7 @@ class AndroidBuilder(Builder):
             'AndroidPlatform.jar': 'src/platform/android/AndroidPlatform.jar',
         }
 
-        for jarName in jars.keys():
+        for jarName in jars:
             self._Execute(['cp', os.path.join(
                 self.output_dir, 'lib', jars[jarName]), os.path.join(libs_dir, jarName)])
 
@@ -185,8 +186,11 @@ class AndroidBuilder(Builder):
             self.root, 'examples', self.app.ExampleName(), 'android/App/app/libs/jniLibs', self.board.AbiName())
         libs_dir = os.path.join(
             self.root, 'examples', self.app.ExampleName(), 'android/App/app/libs')
-        self._Execute(['mkdir', '-p', jnilibs_dir],
-                      title='Prepare Native libs ' + self.identifier)
+        self._Execute(
+            ['mkdir', '-p', jnilibs_dir],
+            title=f'Prepare Native libs {self.identifier}',
+        )
+
 
         if self.app.ExampleName() == 'tv-casting-app':
             libs = ['libc++_shared.so', 'libTvCastingApp.so']
@@ -210,48 +214,55 @@ class AndroidBuilder(Builder):
                 'CHIPAppServer.jar': 'third_party/connectedhomeip/src/app/server/java/CHIPAppServer.jar',
                 'TvApp.jar': 'TvApp.jar',
             }
-        for jarName in jars.keys():
+        for jarName in jars:
             self._Execute(['cp', os.path.join(
                 self.output_dir, 'lib', jars[jarName]), os.path.join(libs_dir, jarName)])
 
     def gradlewBuildSrcAndroid(self):
         # App compilation
-        self._Execute([
-            '%s/src/android/%s/gradlew' % (self.root,
-                                           self.app.AppName()), '-p',
-            '%s/src/android/%s' % (self.root,
-                                   self.app.AppName()),
-            '-PmatterBuildSrcDir=%s' % self.output_dir,
-            '-PmatterSdkSourceBuild=false',
-            '-PbuildDir=%s' % self.output_dir, 'assembleDebug'
-        ],
-            title='Building APP ' + self.identifier)
+        self._Execute(
+            [
+                f'{self.root}/src/android/{self.app.AppName()}/gradlew',
+                '-p',
+                f'{self.root}/src/android/{self.app.AppName()}',
+                f'-PmatterBuildSrcDir={self.output_dir}',
+                '-PmatterSdkSourceBuild=false',
+                f'-PbuildDir={self.output_dir}',
+                'assembleDebug',
+            ],
+            title=f'Building APP {self.identifier}',
+        )
 
     def gradlewBuildExampleAndroid(self):
         # Example compilation
         if self.app.Modules():
             for module in self.app.Modules():
-                self._Execute([
-                    '%s/examples/%s/android/App/gradlew' % (self.root,
-                                                            self.app.ExampleName()), '-p',
-                    '%s/examples/%s/android/App/' % (self.root,
-                                                     self.app.ExampleName()),
-                    '-PmatterBuildSrcDir=%s' % self.output_dir,
-                    '-PmatterSdkSourceBuild=false',
-                    '-PbuildDir=%s/%s' % (self.output_dir, module), ':%s:assembleDebug' % module
-                ],
-                    title='Building Example %s, module %s' % (self.identifier, module))
+                self._Execute(
+                    [
+                        f'{self.root}/examples/{self.app.ExampleName()}/android/App/gradlew',
+                        '-p',
+                        f'{self.root}/examples/{self.app.ExampleName()}/android/App/',
+                        f'-PmatterBuildSrcDir={self.output_dir}',
+                        '-PmatterSdkSourceBuild=false',
+                        f'-PbuildDir={self.output_dir}/{module}',
+                        f':{module}:assembleDebug',
+                    ],
+                    title=f'Building Example {self.identifier}, module {module}',
+                )
+
         else:
-            self._Execute([
-                '%s/examples/%s/android/App/gradlew' % (self.root,
-                                                        self.app.ExampleName()), '-p',
-                '%s/examples/%s/android/App/' % (self.root,
-                                                 self.app.ExampleName()),
-                '-PmatterBuildSrcDir=%s' % self.output_dir,
-                '-PmatterSdkSourceBuild=false',
-                '-PbuildDir=%s' % self.output_dir, 'assembleDebug'
-            ],
-                title='Building Example ' + self.identifier)
+            self._Execute(
+                [
+                    f'{self.root}/examples/{self.app.ExampleName()}/android/App/gradlew',
+                    '-p',
+                    f'{self.root}/examples/{self.app.ExampleName()}/android/App/',
+                    f'-PmatterBuildSrcDir={self.output_dir}',
+                    '-PmatterSdkSourceBuild=false',
+                    f'-PbuildDir={self.output_dir}',
+                    'assembleDebug',
+                ],
+                title=f'Building Example {self.identifier}',
+            )
 
     def generate(self):
         self._Execute([
@@ -263,23 +274,18 @@ class AndroidBuilder(Builder):
             if not self._runner.dry_run:
                 self.validate_build_environment()
 
-            gn_args = {}
-            gn_args['target_os'] = 'android'
-            gn_args['target_cpu'] = self.board.TargetCpuName()
+            gn_args = {'target_os': 'android', 'target_cpu': self.board.TargetCpuName()}
             gn_args['android_ndk_root'] = os.environ['ANDROID_NDK_HOME']
             gn_args['android_sdk_root'] = os.environ['ANDROID_HOME']
-            gn_args.update(self.app.AppGnArgs())
+            gn_args |= self.app.AppGnArgs()
 
             args_str = ""
             for key, value in gn_args.items():
                 if type(value) == bool:
-                    if value:
-                        args_str += '%s=true ' % (key)
-                    else:
-                        args_str += '%s=false ' % (key)
+                    args_str += f'{key}=true ' if value else f'{key}=false '
                 else:
                     args_str += '%s="%s" ' % (key, shlex.quote(value))
-            args = '--args=%s' % (args_str)
+            args = f'--args={args_str}'
 
             gn_gen = [
                 'gn', 'gen', '--check', '--fail-on-unused-args', self.output_dir, args,
@@ -287,51 +293,57 @@ class AndroidBuilder(Builder):
 
             exampleName = self.app.ExampleName()
             if exampleName is not None:
-                gn_gen += ['--root=%s/examples/%s/android/' %
-                           (self.root, exampleName)]
+                gn_gen += [f'--root={self.root}/examples/{exampleName}/android/']
 
             if self.board.IsIde():
                 gn_gen += ['--ide=json',
                            '--json-ide-script=//scripts/examples/gn_to_cmakelists.py']
 
-            self._Execute(gn_gen, title='Generating ' + self.identifier)
+            self._Execute(gn_gen, title=f'Generating {self.identifier}')
 
             new_sdk_manager = os.path.join(os.environ['ANDROID_HOME'], 'cmdline-tools', 'latest',
                                            'bin', 'sdkmanager')
             if (os.path.isfile(new_sdk_manager) and os.access(new_sdk_manager, os.X_OK)):
-                self._Execute([
-                    'bash', '-c',
-                    'yes | %s --licenses >/dev/null' %
-                    new_sdk_manager
-                ],
-                    title='Accepting NDK licenses @ cmdline-tools')
+                self._Execute(
+                    [
+                        'bash',
+                        '-c',
+                        f'yes | {new_sdk_manager} --licenses >/dev/null',
+                    ],
+                    title='Accepting NDK licenses @ cmdline-tools',
+                )
+
             else:
                 sdk_manager = os.path.join(os.environ['ANDROID_HOME'], 'tools', 'bin',
                                            'sdkmanager')
-                self._Execute([
-                    'bash', '-c',
-                    'yes | %s --licenses >/dev/null' %
-                    sdk_manager
-                ],
-                    title='Accepting NDK licenses @ tools')
+                self._Execute(
+                    ['bash', '-c', f'yes | {sdk_manager} --licenses >/dev/null'],
+                    title='Accepting NDK licenses @ tools',
+                )
 
     def _build(self):
         if self.board.IsIde():
             # App compilation IDE
             # TODO: Android Gradle with module and -PbuildDir= will caused issue, remove -PbuildDir=
-            self._Execute([
-                '%s/src/android/%s/gradlew' % (self.root,
-                                               self.app.AppName()), '-p',
-                '%s/src/android/%s' % (self.root, self.app.AppName()),
-                '-PmatterBuildSrcDir=%s' % self.output_dir,
-                '-PmatterSdkSourceBuild=true',
-                '-PmatterSourceBuildAbiFilters=%s' % self.board.AbiName(),
-                'assembleDebug'
-            ],
-                title='Building APP ' + self.identifier)
+            self._Execute(
+                [
+                    f'{self.root}/src/android/{self.app.AppName()}/gradlew',
+                    '-p',
+                    f'{self.root}/src/android/{self.app.AppName()}',
+                    f'-PmatterBuildSrcDir={self.output_dir}',
+                    '-PmatterSdkSourceBuild=true',
+                    f'-PmatterSourceBuildAbiFilters={self.board.AbiName()}',
+                    'assembleDebug',
+                ],
+                title=f'Building APP {self.identifier}',
+            )
+
         else:
-            self._Execute(['ninja', '-C', self.output_dir],
-                          title='Building JNI ' + self.identifier)
+            self._Execute(
+                ['ninja', '-C', self.output_dir],
+                title=f'Building JNI {self.identifier}',
+            )
+
 
             exampleName = self.app.ExampleName()
             if exampleName is None:
@@ -343,41 +355,61 @@ class AndroidBuilder(Builder):
 
     def build_outputs(self):
         if self.board.IsIde():
-            outputs = {
-                self.app.AppName() + '-debug.apk':
-                    os.path.join(self.root, "src/android", self.app.AppName(),
-                                 'app/build/outputs/apk/debug/app-debug.apk')
+            return {
+                f'{self.app.AppName()}-debug.apk': os.path.join(
+                    self.root,
+                    "src/android",
+                    self.app.AppName(),
+                    'app/build/outputs/apk/debug/app-debug.apk',
+                )
             }
+
         elif self.app.ExampleName() is not None:
-            outputs = {
-                self.app.AppName() + 'app-debug.apk':
-                os.path.join(self.output_dir, 'outputs', 'apk', 'debug',
-                             'app-debug.apk')
+            return {
+                f'{self.app.AppName()}app-debug.apk': os.path.join(
+                    self.output_dir, 'outputs', 'apk', 'debug', 'app-debug.apk'
+                )
             }
+
         else:
-            outputs = {
-                self.app.AppName() + 'app-debug.apk':
-                os.path.join(self.output_dir, 'outputs', 'apk', 'debug',
-                             'app-debug.apk'),
-                'CHIPController.jar':
-                    os.path.join(self.output_dir, 'lib',
-                                 'src/controller/java/CHIPController.jar'),
-                'AndroidPlatform.jar':
-                    os.path.join(self.output_dir, 'lib',
-                                 'src/platform/android/AndroidPlatform.jar'),
-                'SetupPayloadParser.jar':
-                    os.path.join(self.output_dir, 'lib',
-                                 'src/setup_payload/java/SetupPayloadParser.jar'),
-
-                'jni/%s/libSetupPayloadParser.so' % self.board.AbiName():
-                    os.path.join(self.output_dir, 'lib', 'jni',
-                                 self.board.AbiName(), 'libSetupPayloadParser.so'),
-                'jni/%s/libCHIPController.so' % self.board.AbiName():
-                    os.path.join(self.output_dir, 'lib', 'jni',
-                                 self.board.AbiName(), 'libCHIPController.so'),
-                'jni/%s/libc++_shared.so' % self.board.AbiName():
-                    os.path.join(self.output_dir, 'lib', 'jni',
-                                 self.board.AbiName(), 'libc++_shared.so'),
+            return {
+                f'{self.app.AppName()}app-debug.apk': os.path.join(
+                    self.output_dir, 'outputs', 'apk', 'debug', 'app-debug.apk'
+                ),
+                'CHIPController.jar': os.path.join(
+                    self.output_dir,
+                    'lib',
+                    'src/controller/java/CHIPController.jar',
+                ),
+                'AndroidPlatform.jar': os.path.join(
+                    self.output_dir,
+                    'lib',
+                    'src/platform/android/AndroidPlatform.jar',
+                ),
+                'SetupPayloadParser.jar': os.path.join(
+                    self.output_dir,
+                    'lib',
+                    'src/setup_payload/java/SetupPayloadParser.jar',
+                ),
+                f'jni/{self.board.AbiName()}/libSetupPayloadParser.so': os.path.join(
+                    self.output_dir,
+                    'lib',
+                    'jni',
+                    self.board.AbiName(),
+                    'libSetupPayloadParser.so',
+                ),
+                f'jni/{self.board.AbiName()}/libCHIPController.so': os.path.join(
+                    self.output_dir,
+                    'lib',
+                    'jni',
+                    self.board.AbiName(),
+                    'libCHIPController.so',
+                ),
+                f'jni/{self.board.AbiName()}/libc++_shared.so': os.path.join(
+                    self.output_dir,
+                    'lib',
+                    'jni',
+                    self.board.AbiName(),
+                    'libc++_shared.so',
+                ),
             }
-
-        return outputs

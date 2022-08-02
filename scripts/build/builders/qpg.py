@@ -98,14 +98,13 @@ class QpgBuilder(GnBuilder):
     def build_outputs(self):
         items = {}
         for extension in ["out", "out.map", "out.hex"]:
-            name = '%s.%s' % (self.app.AppNamePrefix(), extension)
+            name = f'{self.app.AppNamePrefix()}.{extension}'
             items[name] = os.path.join(self.output_dir, name)
 
         # Figure out flash bundle files and build accordingly
         with open(os.path.join(self.output_dir, self.app.FlashBundleName())) as f:
-            for line in f.readlines():
+            for line in f:
                 name = line.strip()
-                items['flashbundle/%s' %
-                      name] = os.path.join(self.output_dir, name)
+                items[f'flashbundle/{name}'] = os.path.join(self.output_dir, name)
 
         return items

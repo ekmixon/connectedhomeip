@@ -246,14 +246,14 @@ class Project(object):
         assert location or name
 
         cmake_target_name = None
-        if location.endswith('/' + name):
+        if location.endswith(f'/{name}'):
             cmake_target_name = location
         elif location:
-            cmake_target_name = location + '_' + name
+            cmake_target_name = f'{location}_{name}'
         else:
             cmake_target_name = name
         if toolchain:
-            cmake_target_name += '--' + toolchain
+            cmake_target_name += f'--{toolchain}'
         return CMakeTargetEscape(cmake_target_name)
 
 
@@ -272,8 +272,7 @@ def WriteAction(out, target, project, sources, synthetic_dependencies):
     for output in target.properties.get('outputs', []):
         output_abs_path = project.GetAbsolutePath(output)
         outputs.append(output_abs_path)
-        output_directory = posixpath.dirname(output_abs_path)
-        if output_directory:
+        if output_directory := posixpath.dirname(output_abs_path):
             output_directories.add(output_directory)
     outputs_name = '${target}__output'
     SetVariableList(out, outputs_name, outputs)
@@ -351,8 +350,7 @@ def WriteActionForEach(out, target, project, sources, synthetic_dependencies):
                                   int(outputs_per_input * (count+1))]:
             output_abs_path = project.GetAbsolutePath(output)
             outputs.append(output_abs_path)
-            output_directory = posixpath.dirname(output_abs_path)
-            if output_directory:
+            if output_directory := posixpath.dirname(output_abs_path):
                 output_directories.add(output_directory)
         outputs_name = '${target}__output_' + str(count)
         SetVariableList(out, outputs_name, outputs)
@@ -450,7 +448,7 @@ def WriteCopy(out, target, project, sources, synthetic_dependencies):
 
 def WriteCompilerFlags(out, target, project, sources):
     # Hack, set linker language to c if no c or cxx files present.
-    if not 'c' in sources and not 'cxx' in sources:
+    if 'c' not in sources and 'cxx' not in sources:
         SetCurrentTargetProperty(out, 'LINKER_LANGUAGE', ['C'])
 
     # Mark uncompiled sources as uncompiled.
@@ -465,21 +463,14 @@ def WriteCompilerFlags(out, target, project, sources):
     if 'obj' in sources:
         SetFilesProperty(out, sources['obj'], 'EXTERNAL_OBJECT', ('True',), '')
 
-    # TODO: 'output_name', 'output_dir', 'output_extension'
-    # This includes using 'source_outputs' to direct compiler output.
-
-    # should not use output_dir, or library will not in android studio folders
-    output_name = target.properties.get('output_name', [])
-    if output_name:
+    if output_name := target.properties.get('output_name', []):
         out.write(
             'set_property(TARGET "${target}" PROPERTY OUTPUT_NAME "')
         out.write(output_name)
         out.write('")\n')
         out.write('set_property(TARGET "${target}" PROPERTY PREFIX "")\n')
 
-    # Includes
-    includes = target.properties.get('include_dirs', [])
-    if includes:
+    if includes := target.properties.get('include_dirs', []):
         out.write('set_property(TARGET "${target}" ')
         out.write('APPEND PROPERTY INCLUDE_DIRECTORIES')
         for include_dir in includes:
@@ -488,9 +479,7 @@ def WriteCompilerFlags(out, target, project, sources):
             out.write('"')
         out.write(')\n')
 
-    # Defines
-    defines = target.properties.get('defines', [])
-    if defines:
+    if defines := target.properties.get('defines', []):
         SetCurrentTargetProperty(out, 'COMPILE_DEFINITIONS', defines, ';')
 
     # Compile flags
@@ -523,13 +512,21 @@ def WriteCompilerFlags(out, target, project, sources):
     cflags_objcc.extend(target.properties.get('cflags_objcc', []))
     cflags_objcc = RemoveByPrefix(cflags_objcc, blockPrefixFlags)
 
-    if 'c' in sources and not any(k in sources for k in ('asm', 'cxx', 'objc', 'objcc')):
+    if 'c' in sources and all(
+        k not in sources for k in ('asm', 'cxx', 'objc', 'objcc')
+    ):
         flags.extend(cflags_c)
-    elif 'cxx' in sources and not any(k in sources for k in ('asm', 'c', 'objc', 'objcc')):
+    elif 'cxx' in sources and all(
+        k not in sources for k in ('asm', 'c', 'objc', 'objcc')
+    ):
         flags.extend(cflags_cxx)
-    elif 'objc' in sources and not any(k in sources for k in ('asm', 'c', 'cxx', 'objcc')):
+    elif 'objc' in sources and all(
+        k not in sources for k in ('asm', 'c', 'cxx', 'objcc')
+    ):
         flags.extend(cflags_objc)
-    elif 'objcc' in sources and not any(k in sources for k in ('asm', 'c', 'cxx', 'objc')):
+    elif 'objcc' in sources and all(
+        k not in sources for k in ('asm', 'c', 'cxx', 'objc')
+    ):
         flags.extend(cflags_objcc)
     else:
         # TODO: This is broken, one cannot generally set properties on files,
@@ -553,8 +550,7 @@ def WriteCompilerFlags(out, target, project, sources):
 
     # Linker flags
     ldflags = target.properties.get('ldflags', [])
-    ldflags = RemoveByPrefix(ldflags, blockPrefixFlags)
-    if ldflags:
+    if ldflags := RemoveByPrefix(ldflags, blockPrefixFlags):
         SetCurrentTargetProperty(out, 'LINK_FLAGS', ldflags, ' ')
 
 
@@ -599,7 +595,7 @@ def WriteSourceVariables(out, target, project):
             target.gn_name, object_dependencies)
         for dependency in object_dependencies:
             cmake_dependency_name = project.GetCMakeTargetName(dependency)
-            obj_target_sources = '$<TARGET_OBJECTS:' + cmake_dependency_name + '>'
+            obj_target_sources = f'$<TARGET_OBJECTS:{cmake_dependency_name}>'
             source_types['obj_target'].append(obj_target_sources)
 
     sources = {}
@@ -616,8 +612,10 @@ def WriteTarget(out, target, project):
     out.write('\n')
 
     if target.cmake_type is None:
-        print('Target %s has unknown target type %s, skipping.' %
-              (target.gn_name,            target.gn_type))
+        print(
+            f'Target {target.gn_name} has unknown target type {target.gn_type}, skipping.'
+        )
+
         return
 
     SetVariable(out, 'target', target.cmake_name)
@@ -671,18 +669,22 @@ def WriteTarget(out, target, project):
             gn_dependency_type, None)
         cmake_dependency_name = project.GetCMakeTargetName(dependency)
 
-        if cmake_dependency_type.command != 'add_library':
+        if (
+            cmake_dependency_type.command == 'add_library'
+            and cmake_dependency_type.modifier != 'OBJECT'
+            and target.cmake_type.is_linkable
+        ):
+            libraries.add(cmake_dependency_name)
+        elif (
+            cmake_dependency_type.command == 'add_library'
+            and cmake_dependency_type.modifier != 'OBJECT'
+            or cmake_dependency_type.command != 'add_library'
+        ):
             nonlibraries.add(cmake_dependency_name)
-        elif cmake_dependency_type.modifier != 'OBJECT':
-            if target.cmake_type.is_linkable:
-                libraries.add(cmake_dependency_name)
-            else:
-                nonlibraries.add(cmake_dependency_name)
 
     # Non-library dependencies.
     if nonlibraries:
-        nonlibrarieslist = list(nonlibraries)
-        nonlibrarieslist.sort()
+        nonlibrarieslist = sorted(nonlibraries)
         out.write('add_dependencies("${target}"')
         for nonlibrary in nonlibrarieslist:
             out.write('\n  "')
@@ -707,7 +709,7 @@ def WriteTarget(out, target, project):
             else:
                 if external_library.endswith('.framework'):
                     external_library = external_library[:-len('.framework')]
-                system_library = 'library__' + external_library
+                system_library = f'library__{external_library}'
                 if library_dirs:
                     system_library = system_library + '__for_${target}'
                 out.write('find_library("')
@@ -726,8 +728,7 @@ def WriteTarget(out, target, project):
             out.write('target_link_libraries("${target}" -Wl,--start-group')
         else:
             out.write('target_link_libraries("${target}"')
-        librarieslist = list(libraries)
-        librarieslist.sort()
+        librarieslist = sorted(libraries)
         for library in librarieslist:
             out.write('\n  "')
             out.write(CMakeStringEscape(library))
@@ -742,27 +743,25 @@ def WriteTarget(out, target, project):
 
 
 def WriteProject(project):
-    out = open(posixpath.join(project.build_path, 'CMakeLists.txt'), 'w+')
-    out.write('# Generated by gn_to_cmake.py.\n')
-    out.write('cmake_minimum_required(VERSION 3.7 FATAL_ERROR)\n')
-    out.write('cmake_policy(VERSION 3.7)\n')
-    out.write('project(MatterAndroid)\n\n')
+    with open(posixpath.join(project.build_path, 'CMakeLists.txt'), 'w+') as out:
+        out.write('# Generated by gn_to_cmake.py.\n')
+        out.write('cmake_minimum_required(VERSION 3.7 FATAL_ERROR)\n')
+        out.write('cmake_policy(VERSION 3.7)\n')
+        out.write('project(MatterAndroid)\n\n')
 
-    out.write('file(WRITE "')
-    out.write(CMakeStringEscape(
-        posixpath.join(project.build_path, "empty.cpp")))
-    out.write('")\n')
+        out.write('file(WRITE "')
+        out.write(CMakeStringEscape(
+            posixpath.join(project.build_path, "empty.cpp")))
+        out.write('")\n')
 
-    for target_name in project.targets.keys():
-        out.write('\n')
-        WriteTarget(out, Target(target_name, project), project)
-
-    out.close()
+        for target_name in project.targets.keys():
+            out.write('\n')
+            WriteTarget(out, Target(target_name, project), project)
 
 
 def main():
     if len(sys.argv) != 2:
-        print('Usage: ' + sys.argv[0] + ' <json_file_name>')
+        print(f'Usage: {sys.argv[0]} <json_file_name>')
         exit(1)
 
     json_path = sys.argv[1]

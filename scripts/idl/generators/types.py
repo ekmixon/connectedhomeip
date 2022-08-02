@@ -33,7 +33,7 @@ def ToPowerOfTwo(bits: int) -> int:
     # probably bit manipulation can be faster, but this should be ok as well
     result = 1
     while result < bits:
-        result = result * 2
+        result *= 2
     return result
 
 
@@ -265,25 +265,13 @@ class TypeLookupContext:
         Find the first enumeration matching the given name for the given
         lookup rules (searches cluster first, then global).
         """
-        for e in self.all_enums:
-            if e.name == name:
-                return e
-
-        return None
+        return next((e for e in self.all_enums if e.name == name), None)
 
     def find_struct(self, name) -> Optional[matter_idl_types.Struct]:
-        for s in self.all_structs:
-            if s.name == name:
-                return s
-
-        return None
+        return next((s for s in self.all_structs if s.name == name), None)
 
     def find_bitmap(self, name) -> Optional[matter_idl_types.Bitmap]:
-        for s in self.all_bitmaps:
-            if s.name == name:
-                return s
-
-        return None
+        return next((s for s in self.all_bitmaps if s.name == name), None)
 
     @property
     def all_enums(self):
@@ -294,10 +282,8 @@ class TypeLookupContext:
         return both instances, however it will return the cluster version first.
         """
         if self.cluster:
-            for e in self.cluster.enums:
-                yield e
-        for e in self.idl.enums:
-            yield e
+            yield from self.cluster.enums
+        yield from self.idl.enums
 
     @property
     def all_bitmaps(self):
@@ -308,8 +294,7 @@ class TypeLookupContext:
         include a cluster, the bitmal list will be empty.
         """
         if self.cluster:
-            for b in self.cluster.bitmaps:
-                yield b
+            yield from self.cluster.bitmaps
 
     @property
     def all_structs(self):
@@ -319,10 +304,8 @@ class TypeLookupContext:
         return both instances, however it will return the cluster version first.
         """
         if self.cluster:
-            for e in self.cluster.structs:
-                yield e
-        for e in self.idl.structs:
-            yield e
+            yield from self.cluster.structs
+        yield from self.idl.structs
 
     def is_enum_type(self, name: str):
         """
@@ -331,7 +314,7 @@ class TypeLookupContext:
         Handles both standard names (like enum8) as well as enumerations defined
         within the current lookup context.
         """
-        if name.lower() in ["enum8", "enum16", "enum32"]:
+        if name.lower() in {"enum8", "enum16", "enum32"}:
             return True
         return any(map(lambda e: e.name == name, self.all_enums))
 
@@ -348,7 +331,13 @@ class TypeLookupContext:
         Handles both standard/zcl names (like bitmap32) and types defined within
         the current lookup context.
         """
-        if name.lower() in ["bitmap8", "bitmap16", "bitmap24", "bitmap32", "bitmap64"]:
+        if name.lower() in {
+            "bitmap8",
+            "bitmap16",
+            "bitmap24",
+            "bitmap32",
+            "bitmap64",
+        }:
             return True
 
         return any(map(lambda s: s.name == name, self.all_bitmaps))
@@ -386,14 +375,11 @@ def ParseDataType(data_type: DataType, lookup: TypeLookupContext) -> Union[Basic
     if int_type is not None:
         return int_type
 
-    # All fast checks done, now check against known data types
-    e = lookup.find_enum(data_type.name)
-    if e:
+    if e := lookup.find_enum(data_type.name):
         # Valid enum found. it MUST be based on a valid data type
         return IdlEnumType(idl_name=data_type.name, base_type=__CHIP_SIZED_TYPES__[e.base_type.lower()])
 
-    b = lookup.find_bitmap(data_type.name)
-    if b:
+    if b := lookup.find_bitmap(data_type.name):
         # Valid enum found. it MUST be based on a valid data type
         return IdlBitmapType(idl_name=data_type.name, base_type=__CHIP_SIZED_TYPES__[b.base_type.lower()])
 
@@ -402,6 +388,8 @@ def ParseDataType(data_type: DataType, lookup: TypeLookupContext) -> Union[Basic
         result.item_type = IdlItemType.STRUCT
     else:
         logging.warn(
-            "Data type %s is NOT known, but treating it as a generic IDL type." % data_type)
+            f"Data type {data_type} is NOT known, but treating it as a generic IDL type."
+        )
+
 
     return result

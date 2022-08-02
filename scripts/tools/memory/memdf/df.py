@@ -121,10 +121,14 @@ def find_class(df: pd.DataFrame):
     """
     if isinstance(df, DF):
         return type(df)
-    for c in [SymbolDF, SectionDF, SegmentDF]:
-        if c.required.issubset(df.columns):
-            return c
-    return None
+    return next(
+        (
+            c
+            for c in [SymbolDF, SectionDF, SegmentDF]
+            if c.required.issubset(df.columns)
+        ),
+        None,
+    )
 
 
 DFs = Dict[str, DF]

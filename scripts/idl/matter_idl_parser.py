@@ -86,10 +86,7 @@ class MatterIdlTransformer(Transformer):
             raise Error("Unexpected argument counts")
 
         n = tokens[0].value
-        if n.startswith('0x'):
-            return int(n[2:], 16)
-        else:
-            return int(n)
+        return int(n[2:], 16) if n.startswith('0x') else int(n)
 
     @v_args(inline=True)
     def negative_integer(self, value):
@@ -204,12 +201,7 @@ class MatterIdlTransformer(Transformer):
         return init_args
 
     def command(self, args):
-        # A command has 4 arguments if no input or
-        # 5 arguments if input parameter is available
-        param_in = None
-        if len(args) > 4:
-            param_in = args[2]
-
+        param_in = args[2] if len(args) > 4 else None
         return Command(
             attributes=args[0], input_param=param_in, output_param=args[-2], code=args[-1], **args[1])
 

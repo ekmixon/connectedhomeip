@@ -24,6 +24,7 @@ Sets the following environment variables:
 - `GH_EVENT_TIMESTAMP`  For `push` events only, the timestamp of the commit.
 """
 
+
 import json
 import os
 import re
@@ -47,9 +48,8 @@ if github['event_name'] == 'pull_request':
     # by scraping the HEAD commit message.
     r = subprocess.run(['git', 'show', '--no-patch', '--format=%s', 'HEAD'],
                        capture_output=True, text=True, check=True)
-    m = re.fullmatch('Merge [0-9a-f]+ into ([0-9a-f]+)', r.stdout)
-    if m:
-        parent = m.group(1)
+    if m := re.fullmatch('Merge [0-9a-f]+ into ([0-9a-f]+)', r.stdout):
+        parent = m[1]
     else:
         parent = github['event']['pull_request']['base']['sha']
 
@@ -60,10 +60,10 @@ elif github['event_name'] == 'push':
     timestamp = dateutil.parser.isoparse(
         github['event']['head_commit']['timestamp']).timestamp()
 
-    # Try to find the PR being committed by scraping the commit message.
-    m = re.search(r'\(#(\d+)\)', github['event']['head_commit']['message'])
-    if m:
-        pr = m.group(1)
+    if m := re.search(
+        r'\(#(\d+)\)', github['event']['head_commit']['message']
+    ):
+        pr = m[1]
     else:
         pr = 0
 

@@ -25,7 +25,7 @@ def simplify_source(source: str, prefixes: Optional[re.Pattern]) -> str:
     """Simplify a source file path."""
     r = source
     if prefixes:
-        if (m := prefixes.match(source)):
+        if m := prefixes.match(r):
             r = r[m.end():]
     if r.startswith(os.path.sep):
         r = r[len(os.path.sep):]

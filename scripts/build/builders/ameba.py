@@ -76,26 +76,28 @@ class AmebaBuilder(Builder):
         cmd += ' '.join([self.root, 'ninja', self.output_dir,
                         self.app.ExampleName])
 
-        self._Execute(['bash', '-c', cmd],
-                      title='Generating ' + self.identifier)
+        self._Execute(['bash', '-c', cmd], title=f'Generating {self.identifier}')
 
     def _build(self):
-        self._Execute(['ninja', '-C', self.output_dir],
-                      title='Building ' + self.identifier)
+        self._Execute(
+            ['ninja', '-C', self.output_dir], title=f'Building {self.identifier}'
+        )
 
     def build_outputs(self):
         return {
-            self.app.AppNamePrefix + '.axf':
-                os.path.join(self.output_dir, 'asdk', 'target_image2.axf'),
-            self.app.AppNamePrefix + '.map':
-                os.path.join(self.output_dir, 'asdk', 'target_image2.map'),
-            'km0_boot_all.bin':
-                os.path.join(self.output_dir, 'asdk',
-                             'bootloader', 'km0_boot_all.bin'),
-            'km4_boot_all.bin':
-                os.path.join(self.output_dir, 'asdk',
-                             'bootloader', 'km4_boot_all.bin'),
-            'km0_km4_image2.bin':
-                os.path.join(self.output_dir, 'asdk',
-                             'image', 'km0_km4_image2.bin'),
+            f'{self.app.AppNamePrefix}.axf': os.path.join(
+                self.output_dir, 'asdk', 'target_image2.axf'
+            ),
+            f'{self.app.AppNamePrefix}.map': os.path.join(
+                self.output_dir, 'asdk', 'target_image2.map'
+            ),
+            'km0_boot_all.bin': os.path.join(
+                self.output_dir, 'asdk', 'bootloader', 'km0_boot_all.bin'
+            ),
+            'km4_boot_all.bin': os.path.join(
+                self.output_dir, 'asdk', 'bootloader', 'km4_boot_all.bin'
+            ),
+            'km0_km4_image2.bin': os.path.join(
+                self.output_dir, 'asdk', 'image', 'km0_km4_image2.bin'
+            ),
         }

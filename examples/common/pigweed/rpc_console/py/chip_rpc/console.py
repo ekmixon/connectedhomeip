@@ -287,7 +287,7 @@ def write_to_output(data: bytes,
             match = log_regex.regex.search(line)
             if match and len(match.groups()) == log_regex.match_num:
                 fields['type'] = log_regex.type
-                fields.update(match.groupdict())
+                fields |= match.groupdict()
                 if "level" in match.groupdict():
                     fields["level"] = LEVEL_MAPPING[fields["level"]]
                 if detokenizer:

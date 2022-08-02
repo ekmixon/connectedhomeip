@@ -70,7 +70,7 @@ class TestCaseStorage(GeneratorStorage):
                     return golden.read()
 
         # This will attempt a new write, causing a unit test failure
-        self.checker.fail("Expected output %s not found" % relative_path)
+        self.checker.fail(f"Expected output {relative_path} not found")
         return None
 
     def write_new_data(self, relative_path: str, content: str):
@@ -83,7 +83,7 @@ class TestCaseStorage(GeneratorStorage):
 
         # Even if no diff, to be build system friendly, we do NOT expect any
         # actual data writes.
-        raise AssertionError("Unexpected write to %s" % relative_path)
+        raise AssertionError(f"Unexpected write to {relative_path}")
 
 
 @dataclass

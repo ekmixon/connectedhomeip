@@ -132,10 +132,14 @@ class BlePeripheral:
         if not servDataDict:
             return None
         servDataDict = dict(servDataDict)
-        for i in servDataDict.keys():
-            if str(i).lower() == str(CHIP_SERVICE_SHORT).lower():
-                return ParseServiceData(bytes(servDataDict[i]))
-        return None
+        return next(
+            (
+                ParseServiceData(bytes(value))
+                for i, value in servDataDict.items()
+                if str(i).lower() == str(CHIP_SERVICE_SHORT).lower()
+            ),
+            None,
+        )
 
 
 class CoreBluetoothManager(ChipBleBase):
@@ -270,7 +274,7 @@ class CoreBluetoothManager(ChipBleBase):
         string = "BLE is ready!" if state > 4 else "BLE is not ready!"
         self.logger.info(string)
         self.manager = manager
-        self.ready_condition = True if state > 4 else False
+        self.ready_condition = state > 4
 
     def centralManager_didDiscoverPeripheral_advertisementData_RSSI_(
         self, manager, peripheral, data, rssi
@@ -291,9 +295,9 @@ class CoreBluetoothManager(ChipBleBase):
                         )
                     )
                     self.logger.info("{0:<16}= {1:<80}".format("RSSI", rssi))
-                    devIdInfo = BlePeripheral(
-                        peripheral, data).getPeripheralDevIdInfo()
-                    if devIdInfo:
+                    if devIdInfo := BlePeripheral(
+                        peripheral, data
+                    ).getPeripheralDevIdInfo():
                         self.logger.info("{0:<16}= {1}".format(
                             "Pairing State", devIdInfo.pairingState))
                         self.logger.info("{0:<16}= {1}".format(
@@ -302,18 +306,17 @@ class CoreBluetoothManager(ChipBleBase):
                             "Vendor Id", devIdInfo.vendorId))
                         self.logger.info("{0:<16}= {1}".format(
                             "Product Id", devIdInfo.productId))
-                    self.logger.info("ADV data: " + repr(data))
+                    self.logger.info(f"ADV data: {repr(data)}")
                     self.logger.info("")
 
                 self.peripheral_list.append(peripheral)
                 self.peripheral_adv_list.append(
                     BlePeripheral(peripheral, data))
-        else:
-            if (peripheral._.name == self.bg_peripheral_name) or (str(devIdInfo.discriminator) == self.bg_peripheral_name):
-                if len(self.peripheral_list) == 0:
-                    self.logger.info("found background peripheral")
-                self.peripheral_list = [peripheral]
-                self.peripheral_adv_list = [BlePeripheral(peripheral, data)]
+        elif (peripheral._.name == self.bg_peripheral_name) or (str(devIdInfo.discriminator) == self.bg_peripheral_name):
+            if len(self.peripheral_list) == 0:
+                self.logger.info("found background peripheral")
+            self.peripheral_list = [peripheral]
+            self.peripheral_adv_list = [BlePeripheral(peripheral, data)]
 
     def centralManager_didConnectPeripheral_(self, manager, peripheral):
         """Called by CoreBluetooth via runloop when a connection succeeds."""
@@ -328,7 +331,7 @@ class CoreBluetoothManager(ChipBleBase):
         self, manager, peripheral, error
     ):
         """Called by CoreBluetooth via runloop when a connection fails."""
-        self.logger.info("Failed to connect error = " + repr(error))
+        self.logger.info(f"Failed to connect error = {repr(error)}")
         self.loop_condition = True
         self.connect_state = False
 
@@ -337,7 +340,7 @@ class CoreBluetoothManager(ChipBleBase):
         self.loop_condition = True
         self.connect_state = False
         if self.devCtrl:
-            self.logger.info("BLE disconnected, error = " + repr(error))
+            self.logger.info(f"BLE disconnected, error = {repr(error)}")
             dcEvent = BleDisconnectEvent(BLE_ERROR_REMOTE_DEVICE_DISCONNECTED)
             self.chip_queue.put(dcEvent)
             self.devCtrl.DriveBleIO()
@@ -368,18 +371,18 @@ class CoreBluetoothManager(ChipBleBase):
     ):
         """Called by CoreBluetooth via runloop when a characteristic for a service is discovered."""
         self.logger.debug(
-            "didDiscoverCharacteristicsForService:error "
-            + str(repr(peripheral))
-            + " "
-            + str(repr(service))
+            (
+                ("didDiscoverCharacteristicsForService:error " + repr(peripheral))
+                + " "
+            )
+            + repr(service)
         )
+
         self.logger.debug(repr(service))
         self.logger.debug(repr(error))
 
         if not error:
-            self.characteristics[service.UUID()] = [
-                char for char in self.service.characteristics()
-            ]
+            self.characteristics[service.UUID()] = list(self.service.characteristics())
 
             self.connect_state = True
 
@@ -395,15 +398,13 @@ class CoreBluetoothManager(ChipBleBase):
     ):
         """Called by CoreBluetooth via runloop when a write to characteristic
         operation completes. error = None on success."""
-        self.logger.debug("didWriteValue error = " + repr(error))
+        self.logger.debug(f"didWriteValue error = {repr(error)}")
         self.send_condition = True
         charId = bytearray(characteristic.UUID().data().bytes().tobytes())
         svcId = bytearray(CHIP_SERVICE.data().bytes().tobytes())
 
         if self.devCtrl:
-            txEvent = BleTxEvent(
-                charId=charId, svcId=svcId, status=True if not error else False
-            )
+            txEvent = BleTxEvent(charId=charId, svcId=svcId, status=not error)
             self.chip_queue.put(txEvent)
             self.devCtrl.DriveBleIO()
 
@@ -416,7 +417,7 @@ class CoreBluetoothManager(ChipBleBase):
         charId = bytearray(characteristic.UUID().data().bytes().tobytes())
         svcId = bytearray(CHIP_SERVICE.data().bytes().tobytes())
         # look at error and send True/False on Success/Failure
-        success = True if not error else False
+        success = not error
         if characteristic.isNotifying():
             operation = BLE_SUBSCRIBE_OPERATION_SUBSCRIBE
             self.subscribe_condition = True
@@ -424,8 +425,8 @@ class CoreBluetoothManager(ChipBleBase):
             operation = BLE_SUBSCRIBE_OPERATION_UNSUBSCRIBE
             self.subscribe_condition = False
 
-        self.logger.debug("Operation = " + repr(operation))
-        self.logger.debug("success = " + repr(success))
+        self.logger.debug(f"Operation = {repr(operation)}")
+        self.logger.debug(f"success = {repr(success)}")
 
         if self.devCtrl:
             subscribeEvent = BleSubscribeEvent(

@@ -54,8 +54,8 @@ with open(compile_commands_path) as compile_commands_json:
         # Trim compiler, input and output
         compile_flags = compile_command.split()[1:-4]
 
-        replace = "-I%s" % args.idf_path
-        replace_with = "-isystem%s" % args.idf_path
+        replace = f"-I{args.idf_path}"
+        replace_with = f"-isystem{args.idf_path}"
 
         compile_flags = list(map(lambda f: ('"%s"' % f).replace(
             replace, replace_with), compile_flags))

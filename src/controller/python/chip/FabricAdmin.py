@@ -75,7 +75,7 @@ class FabricAdmin:
         '''
         nextFabricIndex = 1
         while nextFabricIndex in FabricAdmin.activeFabricIndexList:
-            nextFabricIndex = nextFabricIndex + 1
+            nextFabricIndex += 1
         return nextFabricIndex
 
     def AllocateNextFabricId(self):
@@ -84,7 +84,7 @@ class FabricAdmin:
         nextFabricId = 1
 
         while nextFabricId in FabricAdmin.activeFabricIdList:
-            nextFabricId = nextFabricId + 1
+            nextFabricId += 1
         return nextFabricId
 
     def __init__(self, rcac: bytes = None, icac: bytes = None, fabricIndex: int = None, fabricId: int = None):
@@ -103,20 +103,20 @@ class FabricAdmin:
 
         if (fabricId is None):
             self._fabricId = self.AllocateNextFabricId()
-        else:
-            if (fabricId in FabricAdmin.activeFabricIdList):
-                raise ValueError(
-                    f"FabricId {fabricId} is already being managed by an existing FabricAdmin object!")
+        elif (fabricId in FabricAdmin.activeFabricIdList):
+            raise ValueError(
+                f"FabricId {fabricId} is already being managed by an existing FabricAdmin object!")
 
+        else:
             self._fabricId = fabricId
 
         if (fabricIndex is None):
             self._fabricIndex = self.AllocateNextFabricIndex()
-        else:
-            if (fabricIndex in FabricAdmin.activeFabricIndexList):
-                raise ValueError(
-                    f"FabricIndex {fabricIndex} is already being managed by an existing FabricAdmin object!")
+        elif (fabricIndex in FabricAdmin.activeFabricIndexList):
+            raise ValueError(
+                f"FabricIndex {fabricIndex} is already being managed by an existing FabricAdmin object!")
 
+        else:
             self._fabricIndex = fabricIndex
 
         # Add it to the tracker to prevent future FabricAdmins from managing the same fabric.
@@ -157,7 +157,9 @@ class FabricAdmin:
         '''
         if (not(self._isActive)):
             raise RuntimeError(
-                f"FabricAdmin object was previously shutdown and is no longer valid!")
+                "FabricAdmin object was previously shutdown and is no longer valid!"
+            )
+
 
         if (nodeId is None):
             nodeId = self.nextControllerId
@@ -165,9 +167,14 @@ class FabricAdmin:
 
         print(
             f"Allocating new controller with FabricId: {self._fabricId}({self._fabricIndex}), NodeId: {nodeId}")
-        controller = ChipDeviceCtrl.ChipDeviceController(
-            self.closure, self._fabricId, self._fabricIndex, nodeId, paaTrustStorePath, useTestCommissioner)
-        return controller
+        return ChipDeviceCtrl.ChipDeviceController(
+            self.closure,
+            self._fabricId,
+            self._fabricIndex,
+            nodeId,
+            paaTrustStorePath,
+            useTestCommissioner,
+        )
 
     def ShutdownAll():
         ''' Shuts down all active fabrics, but without deleting them from storage.

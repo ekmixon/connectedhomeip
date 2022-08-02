@@ -34,13 +34,13 @@ def checkPythonVersion():
 
 def checkFileExists(path):
     if not os.path.isfile(path):
-        print('Error: ' + path + ' does not exists or is not a file.')
+        print(f'Error: {path} does not exists or is not a file.')
         exit(1)
 
 
 def checkDirExists(path):
     if not os.path.isdir(path):
-        print('Error: ' + path + ' does not exists or is not a directory.')
+        print(f'Error: {path} does not exists or is not a directory.')
         exit(1)
 
 
@@ -62,9 +62,7 @@ def runArgumentsParser():
     parser.add_argument('zap', help='Path to the application .zap file')
     args = parser.parse_args()
 
-    zap_file = getFilePath(args.zap)
-
-    return zap_file
+    return getFilePath(args.zap)
 
 
 def detectZclFile(zapFile):

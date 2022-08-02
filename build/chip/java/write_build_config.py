@@ -40,10 +40,7 @@ def ParseGnList(value):
     if value.startswith('[') and value.endswith(']'):
         gn_list = value.strip("[]").replace(
             "\"", "").replace(" ", "").split(",")
-        if not gn_list[0]:
-            return []
-        else:
-            return gn_list
+        return gn_list if gn_list[0] else []
 
 
 def GetAllDependentJars(deps_configs_data):

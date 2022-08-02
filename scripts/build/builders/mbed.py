@@ -113,39 +113,62 @@ class MbedBuilder(Builder):
 
     def generate(self):
         if not os.path.exists(self.output_dir):
-            self._Execute(['mbed-tools', 'configure',
-                           '-t', self.toolchain,
-                           '-m', self.board.BoardName,
-                           '-p', self.ExamplePath,
-                           '-o', self.output_dir,
-                           '--mbed-os-path', self.mbed_os_path,
-                           ], title='Generating config ' + self.identifier)
+            self._Execute(
+                [
+                    'mbed-tools',
+                    'configure',
+                    '-t',
+                    self.toolchain,
+                    '-m',
+                    self.board.BoardName,
+                    '-p',
+                    self.ExamplePath,
+                    '-o',
+                    self.output_dir,
+                    '--mbed-os-path',
+                    self.mbed_os_path,
+                ],
+                title=f'Generating config {self.identifier}',
+            )
 
-            self._Execute(['cmake', '-S', shlex.quote(self.ExamplePath), '-B', shlex.quote(self.output_dir), '-GNinja',
-                           '-DCMAKE_BUILD_TYPE={}'.format(
-                               self.profile.ProfileName.lower()),
-                           '-DMBED_OS_PATH={}'.format(
-                               shlex.quote(self.mbed_os_path)),
-                           '-DMBED_OS_POSIX_SOCKET_PATH={}'.format(
-                               shlex.quote(self.mbed_os_posix_socket_path)),
-                           ], title='Generating ' + self.identifier)
+
+            self._Execute(
+                [
+                    'cmake',
+                    '-S',
+                    shlex.quote(self.ExamplePath),
+                    '-B',
+                    shlex.quote(self.output_dir),
+                    '-GNinja',
+                    f'-DCMAKE_BUILD_TYPE={self.profile.ProfileName.lower()}',
+                    f'-DMBED_OS_PATH={shlex.quote(self.mbed_os_path)}',
+                    f'-DMBED_OS_POSIX_SOCKET_PATH={shlex.quote(self.mbed_os_posix_socket_path)}',
+                ],
+                title=f'Generating {self.identifier}',
+            )
 
     def _build(self):
         # Remove old artifacts to force linking
-        cmd = 'rm -rf {}/chip-*'.format(self.output_dir)
-        self._Execute(['bash', '-c', cmd],
-                      title='Remove old artifacts ' + self.identifier)
+        cmd = f'rm -rf {self.output_dir}/chip-*'
+        self._Execute(
+            ['bash', '-c', cmd], title=f'Remove old artifacts {self.identifier}'
+        )
 
-        self._Execute(['cmake', '--build', shlex.quote(self.output_dir)],
-                      title='Building ' + self.identifier)
+
+        self._Execute(
+            ['cmake', '--build', shlex.quote(self.output_dir)],
+            title=f'Building {self.identifier}',
+        )
 
     def build_outputs(self):
         return {
-            self.app.AppNamePrefix + '.elf':
-                os.path.join(self.output_dir, self.app.AppNamePrefix + '.elf'),
-            self.app.AppNamePrefix + '.hex':
-                os.path.join(self.output_dir, self.app.AppNamePrefix + '.hex'),
-            self.app.AppNamePrefix + '.map':
-                os.path.join(self.output_dir,
-                             self.app.AppNamePrefix + '.elf.map'),
+            f'{self.app.AppNamePrefix}.elf': os.path.join(
+                self.output_dir, f'{self.app.AppNamePrefix}.elf'
+            ),
+            f'{self.app.AppNamePrefix}.hex': os.path.join(
+                self.output_dir, f'{self.app.AppNamePrefix}.hex'
+            ),
+            f'{self.app.AppNamePrefix}.map': os.path.join(
+                self.output_dir, f'{self.app.AppNamePrefix}.elf.map'
+            ),
         }

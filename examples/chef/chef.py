@@ -60,15 +60,11 @@ def splash() -> None:
 
 
 def load_config() -> None:
-    config = dict()
-    config["nrfconnect"] = dict()
-    config["esp32"] = dict()
-    config["silabs-thread"] = dict()
+    config = {"nrfconnect": {}, "esp32": {}, "silabs-thread": {}}
     configFile = f"{_CHEF_SCRIPT_PATH}/config.yaml"
     if (os.path.exists(configFile)):
         configStream = open(configFile, 'r')
         config = yaml.load(configStream, Loader=yaml.SafeLoader)
-        configStream.close()
     else:
         flush_print("Running for the first time and configuring config.yaml. " +
                     "Change this configuration file to include correct configuration " +
@@ -84,8 +80,7 @@ def load_config() -> None:
 
         flush_print(yaml.dump(config))
         yaml.dump(config, configStream)
-        configStream.close()
-
+    configStream.close()
     return config
 
 

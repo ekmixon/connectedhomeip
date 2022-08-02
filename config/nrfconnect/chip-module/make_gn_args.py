@@ -41,20 +41,20 @@ def escape_strings(gn_args):
 
 def write_gn_args(args):
     if args.module:
-        sys.stdout.write('import("{}")\n'.format(args.module))
+        sys.stdout.write(f'import("{args.module}")\n')
 
     for key, value in args.arg:
-        sys.stdout.write('{} = {}\n'.format(key, value))
+        sys.stdout.write(f'{key} = {value}\n')
 
     for key, value in args.arg_string:
-        sys.stdout.write('{} = "{}"\n'.format(key, value))
+        sys.stdout.write(f'{key} = "{value}"\n')
 
-    cflag_excludes = ', '.join(['"{}"'.format(exclude)
-                               for exclude in GN_CFLAG_EXCLUDES])
+    cflag_excludes = ', '.join([f'"{exclude}"' for exclude in GN_CFLAG_EXCLUDES])
 
     for key, value in args.arg_cflags:
-        sys.stdout.write('{} = filter_exclude(string_split("{}"), [{}])\n'.format(
-            key, value, cflag_excludes))
+        sys.stdout.write(
+            f'{key} = filter_exclude(string_split("{value}"), [{cflag_excludes}])\n'
+        )
 
 
 def main():

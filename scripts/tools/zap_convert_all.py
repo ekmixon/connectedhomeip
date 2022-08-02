@@ -32,9 +32,7 @@ def checkPythonVersion():
 
 
 def getTargets():
-    targets = []
-    targets.extend([[str(filepath)]
-                   for filepath in Path('./examples').rglob('*.zap')])
+    targets = [[str(filepath)] for filepath in Path('./examples').rglob('*.zap')]
     targets.extend([[str(filepath)]
                    for filepath in Path('./src/darwin').rglob('*.zap')])
     targets.extend([[str(filepath)] for filepath in Path(

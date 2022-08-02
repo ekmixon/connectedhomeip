@@ -31,10 +31,8 @@ def read_hierified(f):
             break
         row = []
         columns = line.split('|')
-        for i in range(0, len(header)):
-            column = columns[i + 1].strip()
-            if not column:
-                column = rows[-1][i]
+        for i in range(len(header)):
+            column = columns[i + 1].strip() or rows[-1][i]
             row.append(column)
         rows.append(tuple(row))
 

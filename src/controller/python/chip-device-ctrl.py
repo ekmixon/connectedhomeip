@@ -67,9 +67,10 @@ scriptDir = os.path.dirname(os.path.abspath(__file__))
 relChipPackageInstallDirs = [
     ".",
     "../lib/python",
-    "../lib/python%s.%s" % (sys.version_info.major, sys.version_info.minor),
-    "../lib/Python%s%s" % (sys.version_info.major, sys.version_info.minor),
+    f"../lib/python{sys.version_info.major}.{sys.version_info.minor}",
+    f"../lib/Python{sys.version_info.major}{sys.version_info.minor}",
 ]
+
 for relInstallDir in relChipPackageInstallDirs:
     absInstallDir = os.path.realpath(os.path.join(scriptDir, relInstallDir))
     if os.path.isdir(os.path.join(absInstallDir, "chip")):
@@ -81,16 +82,13 @@ if platform.system() == 'Darwin':
 elif sys.platform.startswith('linux'):
     from chip.ChipBluezMgr import BluezManager as BleManager
 
-# The exceptions for CHIP Device Controller CLI
-
-
 class ChipDevCtrlException(exceptions.ChipStackException):
     pass
 
 
 class ParsingError(ChipDevCtrlException):
     def __init__(self, msg=None):
-        self.msg = "Parsing Error: " + msg
+        self.msg = f"Parsing Error: {msg}"
 
     def __str__(self):
         return self.msg
@@ -133,7 +131,7 @@ def ParseValueWithType(value, type):
     elif type == 'bool':
         return (value.upper() not in ['F', 'FALSE', '0'])
     else:
-        raise ParsingError('cannot recognize type: {}'.format(type))
+        raise ParsingError(f'cannot recognize type: {type}')
 
 
 def FormatZCLArguments(args, command):
@@ -148,8 +146,7 @@ def FormatZCLArguments(args, command):
 
 
 def ShowColoredWarnings(message, category, filename, lineno, file=None, line=None):
-    logging.warning(' %s:%s: %s:%s' %
-                    (filename, lineno, category.__name__, message))
+    logging.warning(f' {filename}:{lineno}: {category.__name__}:{message}')
     return
 
 
@@ -192,8 +189,7 @@ class DeviceMgrCmd(Cmd):
         if sys.platform.startswith("linux") and (bluetoothAdapter is not None):
             try:
                 self.bleMgr = BleManager(self.devCtrl)
-                self.bleMgr.ble_adapter_select(
-                    "hci{}".format(bluetoothAdapter))
+                self.bleMgr.ble_adapter_select(f"hci{bluetoothAdapter}")
             except Exception as ex:
                 traceback.print_exc()
                 print(
@@ -248,14 +244,15 @@ class DeviceMgrCmd(Cmd):
         cmd, arg, line = Cmd.parseline(self, line)
         if cmd:
             cmd = self.shortCommandName(cmd)
-            line = cmd + " " + arg
+            line = f"{cmd} {arg}"
         return cmd, arg, line
 
     def completenames(self, text, *ignored):
         return [
-            name + " "
+            f"{name} "
             for name in DeviceMgrCmd.command_names
-            if name.startswith(text) or self.shortCommandName(name).startswith(text)
+            if name.startswith(text)
+            or self.shortCommandName(name).startswith(text)
         ]
 
     def shortCommandName(self, cmd):
@@ -263,7 +260,7 @@ class DeviceMgrCmd(Cmd):
 
     def precmd(self, line):
         if not self.use_rawinput and line != "EOF" and line != "":
-            print(">>> " + line)
+            print(f">>> {line}")
         return line
 
     def postcmd(self, stop, line):
@@ -286,7 +283,7 @@ class DeviceMgrCmd(Cmd):
         if line:
             cmd, arg, unused = self.parseline(line)
             try:
-                doc = getattr(self, "do_" + cmd).__doc__
+                doc = getattr(self, f"do_{cmd}").__doc__
             except AttributeError:
                 doc = None
             if doc:
@@ -321,7 +318,7 @@ class DeviceMgrCmd(Cmd):
         try:
             self.devCtrl.CloseBLEConnection()
         except exceptions.ChipStackException as ex:
-            print(str(ex))
+            print(ex)
 
     def do_setlogoutput(self, line):
         """
@@ -340,7 +337,7 @@ class DeviceMgrCmd(Cmd):
             self.do_help("set-log-output")
             return
         if len(args) > 1:
-            print("Unexpected argument: " + args[1])
+            print(f"Unexpected argument: {args[1]}")
             return
 
         category = args[0].lower()
@@ -353,13 +350,13 @@ class DeviceMgrCmd(Cmd):
         elif category == "detail":
             category = 3
         else:
-            print("Invalid argument: " + args[0])
+            print(f"Invalid argument: {args[0]}")
             return
 
         try:
             self.devCtrl.SetLogFilter(category)
         except exceptions.ChipStackException as ex:
-            print(str(ex))
+            print(ex)
             return
 
     def do_setuppayload(self, line):
@@ -414,7 +411,7 @@ class DeviceMgrCmd(Cmd):
                 SetupPayload().ParseQrCode(arglist[1]).Print()
 
         except exceptions.ChipStackException as ex:
-            print(str(ex))
+            print(ex)
             return
 
     def do_bleadapterselect(self, line):
@@ -505,7 +502,7 @@ class DeviceMgrCmd(Cmd):
             self.devCtrl.GetIPForDiscoveredDevice(
                 0, addrStrStorage, strlen)
             addrStr = addrStrStorage.value.decode('utf-8')
-            print("Connecting to device at " + addrStr)
+            print(f"Connecting to device at {addrStr}")
             pincode = ctypes.c_uint32(
                 int(setupPayload.attributes['SetUpPINCode']))
             try:
@@ -549,7 +546,7 @@ class DeviceMgrCmd(Cmd):
             nodeid = random.randint(1, 1000000)  # Just a random number
             if len(args) == 4:
                 nodeid = int(args[3])
-            print("Device is assigned with nodeid = {}".format(nodeid))
+            print(f"Device is assigned with nodeid = {nodeid}")
 
             if args[0] == "-ip" and len(args) >= 3:
                 self.devCtrl.EstablishPASESessionIP(args[1], int(args[2]), nodeid)
@@ -557,10 +554,9 @@ class DeviceMgrCmd(Cmd):
                 print("Usage:")
                 self.do_help("paseonly")
                 return
-            print(
-                "Device temporary node id (**this does not match spec**): {}".format(nodeid))
+            print(f"Device temporary node id (**this does not match spec**): {nodeid}")
         except Exception as ex:
-            print(str(ex))
+            print(ex)
             return
 
     def do_commission(self, line):
@@ -579,7 +575,7 @@ class DeviceMgrCmd(Cmd):
             nodeid = int(args[0])
             self.devCtrl.Commission(nodeid)
         except Exception as ex:
-            print(str(ex))
+            print(ex)
             return
 
     def do_connect(self, line):
@@ -610,7 +606,7 @@ class DeviceMgrCmd(Cmd):
             nodeid = random.randint(1, 1000000)  # Just a random number
             if len(args) == 4:
                 nodeid = int(args[3])
-            print("Device is assigned with nodeid = {}".format(nodeid))
+            print(f"Device is assigned with nodeid = {nodeid}")
 
             if args[0] == "-ip" and len(args) >= 3:
                 self.devCtrl.CommissionIP(args[1], int(args[2]), nodeid)
@@ -619,7 +615,7 @@ class DeviceMgrCmd(Cmd):
             elif args[0] in ['-qr', '-code'] and len(args) >= 2:
                 if len(args) == 3:
                     nodeid = int(args[2])
-                print("Parsing QR code {}".format(args[1]))
+                print(f"Parsing QR code {args[1]}")
 
                 setupPayload = None
                 if args[0] == '-qr':
@@ -637,10 +633,9 @@ class DeviceMgrCmd(Cmd):
                 print("Usage:")
                 self.do_help("connect SetupPinCode")
                 return
-            print(
-                "Device temporary node id (**this does not match spec**): {}".format(nodeid))
+            print(f"Device temporary node id (**this does not match spec**): {nodeid}")
         except exceptions.ChipStackException as ex:
-            print(str(ex))
+            print(ex)
             return
 
     def do_closesession(self, line):
@@ -656,7 +651,7 @@ class DeviceMgrCmd(Cmd):
 
             self.devCtrl.CloseSession(args.nodeid)
         except exceptions.ChipStackException as ex:
-            print(str(ex))
+            print(ex)
         except:
             self.do_help("close-session")
 
@@ -675,13 +670,13 @@ class DeviceMgrCmd(Cmd):
                     address = self.devCtrl.GetAddressAndPort(int(args[0]))
                     address = "{}:{}".format(
                         *address) if address else "unknown"
-                    print("Current address: " + address)
+                    print(f"Current address: {address}")
                 except exceptions.ChipStackException as ex:
-                    print(str(ex))
+                    print(ex)
             else:
                 self.do_help("resolve")
         except exceptions.ChipStackException as ex:
-            print(str(ex))
+            print(ex)
             return
 
     def wait_for_one_discovered_device(self):
@@ -692,7 +687,7 @@ class DeviceMgrCmd(Cmd):
         maxWaitTime = 2
         while (not self.devCtrl.GetIPForDiscoveredDevice(0, addrStrStorage, strlen) and count < maxWaitTime):
             time.sleep(0.2)
-            count = count + 0.2
+            count += 0.2
         return count < maxWaitTime
 
     def wait_for_many_discovered_devices(self):
@@ -775,7 +770,7 @@ class DeviceMgrCmd(Cmd):
             self.devCtrl.PrintDiscoveredDevices()
         except exceptions.ChipStackException as ex:
             print('exception')
-            print(str(ex))
+            print(ex)
             return
         except:
             self.do_help("discover")
@@ -801,8 +796,13 @@ class DeviceMgrCmd(Cmd):
                 if args[1] not in all_commands:
                     raise exceptions.UnknownCluster(args[1])
                 for commands in all_commands.get(args[1]).items():
-                    args = ", ".join(["{}: {}".format(argName, argType)
-                                      for argName, argType in commands[1].items()])
+                    args = ", ".join(
+                        [
+                            f"{argName}: {argType}"
+                            for argName, argType in commands[1].items()
+                        ]
+                    )
+
                     print(commands[0])
                     if commands[1]:
                         print("  ", args)
@@ -818,7 +818,7 @@ class DeviceMgrCmd(Cmd):
                 err, res = self.devCtrl.ZCLSend(args[0], args[1], int(
                     args[2]), int(args[3]), int(args[4]), FormatZCLArguments(args[5:], command), blocking=True)
                 if err != 0:
-                    print("Failed to receive command response: {}".format(res))
+                    print(f"Failed to receive command response: {res}")
                 elif res != None:
                     print("Received command status response:")
                     print(res)
@@ -828,11 +828,11 @@ class DeviceMgrCmd(Cmd):
                 self.do_help("zcl")
         except exceptions.ChipStackException as ex:
             print("An exception occurred during process ZCL command:")
-            print(str(ex))
+            print(ex)
         except Exception as ex:
             print("An exception occurred during processing input:")
             traceback.print_exc()
-            print(str(ex))
+            print(ex)
 
     def do_zclread(self, line):
         """
@@ -859,10 +859,10 @@ class DeviceMgrCmd(Cmd):
                 self.do_help("zclread")
         except exceptions.ChipStackException as ex:
             print("An exception occurred during reading ZCL attribute:")
-            print(str(ex))
+            print(ex)
         except Exception as ex:
             print("An exception occurred during processing input:")
-            print(str(ex))
+            print(ex)
 
     def do_zclwrite(self, line):
         """
@@ -878,8 +878,16 @@ class DeviceMgrCmd(Cmd):
                 if args[1] not in all_attrs:
                     raise exceptions.UnknownCluster(args[1])
                 cluster_attrs = all_attrs.get(args[1], {})
-                print('\n'.join(["{}: {}".format(key, cluster_attrs[key]["type"])
-                      for key in cluster_attrs.keys() if cluster_attrs[key].get("writable", False)]))
+                print(
+                    '\n'.join(
+                        [
+                            f'{key}: {cluster_attrs[key]["type"]}'
+                            for key in cluster_attrs.keys()
+                            if cluster_attrs[key].get("writable", False)
+                        ]
+                    )
+                )
+
             elif len(args) == 6:
                 if args[0] not in all_attrs:
                     raise exceptions.UnknownCluster(args[0])
@@ -892,10 +900,10 @@ class DeviceMgrCmd(Cmd):
                 self.do_help("zclwrite")
         except exceptions.ChipStackException as ex:
             print("An exception occurred during writing ZCL attribute:")
-            print(str(ex))
+            print(ex)
         except Exception as ex:
             print("An exception occurred during processing input:")
-            print(str(ex))
+            print(ex)
 
     def do_zclsubscribe(self, line):
         """
@@ -930,10 +938,10 @@ class DeviceMgrCmd(Cmd):
                 self.do_help("zclsubscribe")
         except exceptions.ChipStackException as ex:
             print("An exception occurred during configuring reporting of ZCL attribute:")
-            print(str(ex))
+            print(ex)
         except Exception as ex:
             print("An exception occurred during processing input:")
-            print(str(ex))
+            print(ex)
 
     def do_setpairingwificredential(self, line):
         """
@@ -948,7 +956,7 @@ class DeviceMgrCmd(Cmd):
             self.devCtrl.SetWiFiCredentials(
                 args[0], args[1])
         except Exception as ex:
-            print(str(ex))
+            print(ex)
             return
 
     def do_setpairingthreadcredential(self, line):
@@ -963,7 +971,7 @@ class DeviceMgrCmd(Cmd):
                 return
             self.devCtrl.SetThreadOperationalDataset(bytes.fromhex(args[0]))
         except Exception as ex:
-            print(str(ex))
+            print(ex)
             return
 
     def do_opencommissioningwindow(self, line):
@@ -1004,7 +1012,7 @@ class DeviceMgrCmd(Cmd):
                 int(arglist[0]), args.timeout, args.iteration, args.discriminator, args.option)
 
         except exceptions.ChipStackException as ex:
-            print(str(ex))
+            print(ex)
             return
         except:
             self.do_help("open-commissioning-window")
@@ -1020,14 +1028,14 @@ class DeviceMgrCmd(Cmd):
             args = shlex.split(line)
 
             if (len(args) > 0):
-                print("Unexpected argument: " + args[1])
+                print(f"Unexpected argument: {args[1]}")
                 return
 
             compressed_fabricid = self.devCtrl.GetCompressedFabricId()
             raw_fabricid = self.devCtrl.GetFabricId()
         except exceptions.ChipStackException as ex:
             print("An exception occurred during reading FabricID:")
-            print(str(ex))
+            print(ex)
             return
 
         print("Get fabric ID complete")
@@ -1115,7 +1123,7 @@ def main():
     (options, remainingArgs) = optParser.parse_args(sys.argv[1:])
 
     if len(remainingArgs) != 0:
-        print("Unexpected argument: %s" % remainingArgs[0])
+        print(f"Unexpected argument: {remainingArgs[0]}")
         sys.exit(-1)
 
     adapterId = None
@@ -1144,11 +1152,11 @@ def main():
 
     print("Chip Device Controller Shell")
     if options.rendezvousAddr:
-        print("Rendezvous address set to %s" % options.rendezvousAddr)
+        print(f"Rendezvous address set to {options.rendezvousAddr}")
 
     # Adapter ID will always be 0
     if adapterId != 0:
-        print("Bluetooth adapter set to hci{}".format(adapterId))
+        print(f"Bluetooth adapter set to hci{adapterId}")
     print()
 
     try:

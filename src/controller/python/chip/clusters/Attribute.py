@@ -92,14 +92,13 @@ class DataVersionFilter:
 
     def __init__(self, EndpointId: int = None, Cluster=None, ClusterId=None, DataVersion=None):
         self.EndpointId = EndpointId
-        if Cluster is not None:
-            # Wildcard read for a specific cluster
-            if (ClusterId is not None):
-                raise Warning(
-                    "Attribute, ClusterId and AttributeId is ignored when Cluster is specified")
-            self.ClusterId = Cluster.id
-        else:
+        if Cluster is None:
             self.ClusterId = ClusterId
+        elif (ClusterId is not None):
+            raise Warning(
+                "Attribute, ClusterId and AttributeId is ignored when Cluster is specified")
+        else:
+            self.ClusterId = Cluster.id
         self.DataVersion = DataVersion
 
     def __str__(self) -> str:
@@ -301,14 +300,22 @@ def _BuildAttributeIndex():
                         if inspect.isclass(attribute):
                             base_classes = inspect.getmro(attribute)
 
-                            # Only match on classes that extend the ClusterAttributeDescriptor class
-                            matched = [
-                                value for value in base_classes if 'ClusterAttributeDescriptor' in str(value)]
-                            if (matched == []):
-                                continue
-
-                            _AttributeIndex[(attribute.cluster_id, attribute.attribute_id)] = (eval(
-                                'chip.clusters.Objects.' + clusterName + '.Attributes.' + attributeName), obj)
+                            if matched := [
+                                value
+                                for value in base_classes
+                                if 'ClusterAttributeDescriptor' in str(value)
+                            ]:
+                                _AttributeIndex[
+                                    (
+                                        attribute.cluster_id,
+                                        attribute.attribute_id,
+                                    )
+                                ] = (
+                                    eval(
+                                        f'chip.clusters.Objects.{clusterName}.Attributes.{attributeName}'
+                                    ),
+                                    obj,
+                                )
 
 
 def _BuildClusterIndex():
@@ -583,19 +590,26 @@ def _BuildEventIndex():
     for clusterName, obj in inspect.getmembers(sys.modules['chip.clusters.Objects']):
         if ('chip.clusters.Objects' in str(obj)) and inspect.isclass(obj):
             for objName, subclass in inspect.getmembers(obj):
-                if inspect.isclass(subclass) and (('Events' == objName)):
+                if inspect.isclass(subclass) and objName == 'Events':
                     for eventName, event in inspect.getmembers(subclass):
                         if inspect.isclass(event):
                             base_classes = inspect.getmro(event)
 
-                            # Only match on classes that extend the ClusterEventescriptor class
-                            matched = [
-                                value for value in base_classes if 'ClusterEvent' in str(value)]
-                            if (matched == []):
-                                continue
-
-                            _EventIndex[str(EventPath(ClusterId=event.cluster_id, EventId=event.event_id))] = eval(
-                                'chip.clusters.Objects.' + clusterName + '.Events.' + eventName)
+                            if matched := [
+                                value
+                                for value in base_classes
+                                if 'ClusterEvent' in str(value)
+                            ]:
+                                _EventIndex[
+                                    str(
+                                        EventPath(
+                                            ClusterId=event.cluster_id,
+                                            EventId=event.event_id,
+                                        )
+                                    )
+                                ] = eval(
+                                    f'chip.clusters.Objects.{clusterName}.Events.{eventName}'
+                                )
 
 
 class AsyncReadTransaction:
@@ -890,9 +904,13 @@ def WriteAttributes(future: Future, eventLoop, device, attributes: List[Attribut
         path.HasDataVersion = attr.HasDataVersion
         path = chip.interaction_model.AttributePathIBstruct.build(path)
         tlv = attr.Attribute.ToTLV(None, attr.Data)
-        writeargs.append(ctypes.c_char_p(path))
-        writeargs.append(ctypes.c_char_p(bytes(tlv)))
-        writeargs.append(ctypes.c_int(len(tlv)))
+        writeargs.extend(
+            (
+                ctypes.c_char_p(path),
+                ctypes.c_char_p(bytes(tlv)),
+                ctypes.c_int(len(tlv)),
+            )
+        )
 
     transaction = AsyncWriteTransaction(future, eventLoop)
     ctypes.pythonapi.Py_IncRef(ctypes.py_object(transaction))
@@ -948,18 +966,15 @@ def Read(future: Future, eventLoop, device, devCtrl, attributes: List[AttributeP
             if f.EndpointId is not None:
                 filter.EndpointId = f.EndpointId
             else:
-                raise ValueError(
-                    f"DataVersionFilter must provide EndpointId.")
+                raise ValueError("DataVersionFilter must provide EndpointId.")
             if f.ClusterId is not None:
                 filter.ClusterId = f.ClusterId
             else:
-                raise ValueError(
-                    f"DataVersionFilter must provide ClusterId.")
+                raise ValueError("DataVersionFilter must provide ClusterId.")
             if f.DataVersion is not None:
                 filter.DataVersion = f.DataVersion
             else:
-                raise ValueError(
-                    f"DataVersionFilter must provide DataVersion.")
+                raise ValueError("DataVersionFilter must provide DataVersion.")
             filter = chip.interaction_model.DataVersionFilterIBstruct.build(
                 filter)
             readargs.append(ctypes.c_char_p(filter))

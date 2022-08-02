@@ -73,17 +73,11 @@ def read_sources(config: Config, filename: str) -> SymbolSourceDF:
     while line := text.readline():
         if not (match := decoder.match(line.rstrip())):
             continue
-        if a := match.group('address'):
-            address = int(a, 16)
-        else:
-            address = 0
-        source = match.group('source') or ''
+        address = int(a, 16) if (a := match['address']) else 0
+        source = match['source'] or ''
         if source:
             source = simplify_source(source, prefixes)
-        rows.append(
-            [address,
-             match.group('kind'),
-             match.group('symbol'), source])
+        rows.append([address, match['kind'], match['symbol'], source])
     return SymbolSourceDF(rows, columns=columns)
 
 
@@ -139,16 +133,17 @@ def read_segments(text: io.TextIOWrapper) -> SegmentDF:
             """, re.VERBOSE)
     columns = ['type', 'vaddress', 'paddress', 'size', 'flags']
     rows = []
-    while line := text.readline():
-        if not (match := decoder.match(line.strip())):
-            break
-        rows.append([
-            match.group('type'),
-            int(match.group('vaddress'), 16),
-            int(match.group('paddress'), 16),
-            int(match.group('size'), 16),
-            decode_segment_flags(match.group('flags')),
-        ])
+    while (line := text.readline()) and (match := decoder.match(line.strip())):
+        rows.append(
+            [
+                match['type'],
+                int(match['vaddress'], 16),
+                int(match['paddress'], 16),
+                int(match['size'], 16),
+                decode_segment_flags(match['flags']),
+            ]
+        )
+
     return SegmentDF(rows, columns=columns)
 
 
@@ -180,16 +175,17 @@ def read_sections(text: io.TextIOWrapper) -> SectionDF:
             \s+(?P<inf>\d+)
             \s+(?P<align>\d+)
             """, re.VERBOSE)
-    while line := text.readline():
-        if not (match := decoder.match(line.strip())):
-            break
-        rows.append([
-            match.group('section'),
-            match.group('type'),
-            int(match.group('address'), 16),
-            int(match.group('size'), 16),
-            decode_section_flags(match.group('flags')),
-        ])
+    while (line := text.readline()) and (match := decoder.match(line.strip())):
+        rows.append(
+            [
+                match['section'],
+                match['type'],
+                int(match['address'], 16),
+                int(match['size'], 16),
+                decode_section_flags(match['flags']),
+            ]
+        )
+
     return SectionDF(rows, columns=columns)
 
 
@@ -207,19 +203,20 @@ def read_symbols(text: io.TextIOWrapper) -> SymbolDF:
             \s+(?P<shndx>\S+)
             \s*(?P<symbol>\S*)
             """, re.VERBOSE)
-    while line := text.readline():
-        if not (match := decoder.match(line.strip())):
-            break
-        symbol = match.group('symbol')
-        stype = match.group('type')
-        rows.append([
-            symbol,
-            int(match.group('address'), 16),
-            int(match.group('size'), 10),
-            stype,
-            match.group('bind'),
-            match.group('shndx'),
-        ])
+    while (line := text.readline()) and (match := decoder.match(line.strip())):
+        symbol = match['symbol']
+        stype = match['type']
+        rows.append(
+            [
+                symbol,
+                int(match['address'], 16),
+                int(match['size'], 10),
+                stype,
+                match['bind'],
+                match['shndx'],
+            ]
+        )
+
     return SymbolDF(rows, columns=columns)
 
 
@@ -245,7 +242,7 @@ def read_file(config: Config, filename: str, method: str = None) -> DFs:
             segment_frames.append(read_segments(text))
         elif line.startswith('Section to Segment'):
             text.readline()
-            section_to_segment.update(read_section_to_segment(text))
+            section_to_segment |= read_section_to_segment(text)
         elif line.startswith('Symbol table'):
             text.readline()
             symbol_frames.append(read_symbols(text))
@@ -267,13 +264,12 @@ def read_file(config: Config, filename: str, method: str = None) -> DFs:
     sections['segment'] = sections['section'].apply(
         lambda s: section_to_segment.get(s, memdf.name.UNKNOWN))
 
-    # Add section name column to symbols.
-    section_map = {str(k): v for k, v in sections['section'].items()}
-    section_map.update({
+    section_map = {str(k): v for k, v in sections['section'].items()} | {
         '0': memdf.name.UNDEF,
         'UND': memdf.name.UNDEF,
-        'ABS': memdf.name.ABS
-    })
+        'ABS': memdf.name.ABS,
+    }
+
     if 'shndx' in symbols.columns:
         symbols['section'] = symbols['shndx'].apply(lambda s: section_map.get(
             s, memdf.name.UNKNOWN))

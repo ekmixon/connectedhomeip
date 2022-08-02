@@ -80,16 +80,15 @@ class IMXBuilder(GnBuilder):
         try:
             entries = os.listdir(self.SysRootPath('IMX_SDK_ROOT'))
         except FileNotFoundError:
-            if self.SysRootPath('IMX_SDK_ROOT') == 'IMX_SDK_ROOT':
-                # CI test, use default value
-                target_cpu = 'arm64'
-                arm_arch = 'armv8-a'
-                sdk_target_sysroot = os.path.join(self.SysRootPath('IMX_SDK_ROOT'), 'sysroots/cortexa53-crypto-poky-linux')
-                cross_compile = 'aarch64-poky-linux'
-                cc = 'aarch64-poky-linux-gcc'
-                cxx = 'aarch64-poky-linux-g++'
-            else:
+            if self.SysRootPath('IMX_SDK_ROOT') != 'IMX_SDK_ROOT':
                 raise Exception('the value of env IMX_SDK_ROOT is not a valid path.')
+            # CI test, use default value
+            target_cpu = 'arm64'
+            arm_arch = 'armv8-a'
+            sdk_target_sysroot = os.path.join(self.SysRootPath('IMX_SDK_ROOT'), 'sysroots/cortexa53-crypto-poky-linux')
+            cross_compile = 'aarch64-poky-linux'
+            cc = 'aarch64-poky-linux-gcc'
+            cxx = 'aarch64-poky-linux-g++'
         else:
             for entry in entries:
                 if entry.startswith(r'environment-setup-'):
@@ -106,20 +105,18 @@ class IMXBuilder(GnBuilder):
                     lines = env_setup_script_fd.readlines()
                     for line in lines:
                         line = line.strip('\n')
-                        m = re.match(r'^\s*export\s+SDKTARGETSYSROOT=(.*)', line)
-                        if m:
-                            sdk_target_sysroot = shlex.split(m.group(1))[0]
+                        if m := re.match(
+                            r'^\s*export\s+SDKTARGETSYSROOT=(.*)', line
+                        ):
+                            sdk_target_sysroot = shlex.split(m[1])[0]
 
-                        m = re.match(r'^\s*export\s+CC=(.*)', line)
-                        if m:
-                            cc = shlex.split(m.group(1))[0]
-                        m = re.match(r'^\s*export\s+CXX=(.*)', line)
-                        if m:
-                            cxx = shlex.split(m.group(1))[0]
+                        if m := re.match(r'^\s*export\s+CC=(.*)', line):
+                            cc = shlex.split(m[1])[0]
+                        if m := re.match(r'^\s*export\s+CXX=(.*)', line):
+                            cxx = shlex.split(m[1])[0]
 
-                        m = re.match(r'^\s*export\s+ARCH=(.*)', line)
-                        if m:
-                            target_cpu = shlex.split(m.group(1))[0]
+                        if m := re.match(r'^\s*export\s+ARCH=(.*)', line):
+                            target_cpu = shlex.split(m[1])[0]
                             if target_cpu == 'arm64':
                                 arm_arch = 'armv8-a'
                             elif target_cpu == 'arm':
@@ -127,9 +124,8 @@ class IMXBuilder(GnBuilder):
                             else:
                                 raise Exception('ARCH should be arm64 or arm in the SDK environment setup script.')
 
-                        m = re.match(r'^\s*export\s+CROSS_COMPILE=(.*)', line)
-                        if m:
-                            cross_compile = shlex.split(m.group(1))[0][:-1]
+                        if m := re.match(r'^\s*export\s+CROSS_COMPILE=(.*)', line):
+                            cross_compile = shlex.split(m[1])[0][:-1]
 
                 try:
                     sdk_target_sysroot
@@ -187,12 +183,8 @@ class IMXBuilder(GnBuilder):
             if os.path.isdir(path):
                 for root, dirs, files in os.walk(path):
                     for file in files:
-                        outputs.update({
-                            file: os.path.join(root, file)
-                        })
+                        outputs[file] = os.path.join(root, file)
             else:
-                outputs.update({
-                    name: os.path.join(self.output_dir, name)
-                })
+                outputs[name] = os.path.join(self.output_dir, name)
 
         return outputs

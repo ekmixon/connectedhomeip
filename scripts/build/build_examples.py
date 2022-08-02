@@ -39,7 +39,7 @@ __LOG_LEVELS__ = {
 
 
 def CommaSeparate(items) -> str:
-    return ', '.join([x for x in items])
+    return ', '.join(list(items))
 
 
 def ValidateRepoPath(context, parameter, value):
@@ -147,13 +147,13 @@ before running this script.
         #       (so that 'targets' works and displays all)
         targets = build.ALL_TARGETS
     else:
-        requested_targets = set([t.lower for t in target])
+        requested_targets = {t.lower for t in target}
         targets = [
             target for target in build.ALL_TARGETS
             if target.name.lower in requested_targets
         ]
 
-        actual_targes = set([t.name.lower for t in targets])
+        actual_targes = {t.name.lower for t in targets}
         if requested_targets != actual_targes:
             logging.error('Targets not found: %s',
                           CommaSeparate(actual_targes))
@@ -196,8 +196,7 @@ def cmd_generate(context):
 def cmd_targets(context):
     for builder in context.obj.builders:
         if builder.target.IsGlobBlacklisted:
-            print("%s (NOGLOB: %s)" %
-                  (builder.target.name, builder.target.GlobBlacklistReason))
+            print(f"{builder.target.name} (NOGLOB: {builder.target.GlobBlacklistReason})")
         else:
             print(builder.target.name)
 

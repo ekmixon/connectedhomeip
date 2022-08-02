@@ -70,14 +70,14 @@ class ArtifactInfo(github.GithubObject.NonCompletableGithubObject):
 
     def delete(self):
         """Delete this artifact."""
-        logging.warning('DELETING artifact ' + self.url)
+        logging.warning(f'DELETING artifact {self.url}')
         self._requester.requestJsonAndCheck('DELETE', self.url)
 
 
 class ArtifactFetcher(github.GithubObject.NonCompletableGithubObject):
 
     def __init__(self, repo):
-        self.url = repo.url + '/actions/artifacts'
+        self.url = f'{repo.url}/actions/artifacts'
         self._requester = repo._requester
 
     def get_artifacts(self):

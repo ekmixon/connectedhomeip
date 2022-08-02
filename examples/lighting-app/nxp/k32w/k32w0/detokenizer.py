@@ -49,9 +49,7 @@ def decode_string(tstr, detok):
         t = bytes.fromhex(tstr)
         s = str(detok.detokenize(t))
 
-        if s.find('$') == 0:
-            return None
-        return s
+        return None if s.find('$') == 0 else s
     except:
         return None
 
@@ -68,21 +66,17 @@ def decode_serial(serialport, outfile, database):
     detokenizer = pw_tokenizer.Detokenizer(database)
     input = serial.Serial(serialport, 115200, timeout=None)
 
-    output = None
-    if outfile:
-        output = open(outfile, 'w')
-
+    output = open(outfile, 'w') if outfile else None
     if input:
 
         try:
-            while(True):
-                if(input.in_waiting > 0):
+            while True:
+                if (input.in_waiting > 0):
                     # read line from serial port and ascii decode
                     line = input.readline().decode('ascii').strip()
                     # find token start and detokenize
                     idx = line.rfind(']')
-                    dstr = decode_string(line[idx + 1:], detokenizer)
-                    if dstr:
+                    if dstr := decode_string(line[idx + 1 :], detokenizer):
                         line = line[:idx+1] + dstr
                     print(line, file=sys.stdout)
                     if output:
@@ -111,24 +105,20 @@ def decode_file(infile, outfile, database):
 
         detokenizer = pw_tokenizer.Detokenizer(database)
 
-        output = open(outfile, 'w')
-
-        with open(infile, 'rb') as file:
-            for line in file:
-                try:
-                    # ascii decode line
-                    # serial terminals may include non ascii characters
-                    line = line.decode('ascii').strip()
-                except:
-                    continue
-                # find token start and detokenize
-                idx = line.rfind(']')
-                dstr = decode_string(line[idx + 1:], detokenizer)
-                if dstr:
-                    line = line[:idx+1] + dstr
-                print(line, file=output)
-        output.close()
-
+        with open(outfile, 'w') as output:
+            with open(infile, 'rb') as file:
+                for line in file:
+                    try:
+                        # ascii decode line
+                        # serial terminals may include non ascii characters
+                        line = line.decode('ascii').strip()
+                    except:
+                        continue
+                    # find token start and detokenize
+                    idx = line.rfind(']')
+                    if dstr := decode_string(line[idx + 1 :], detokenizer):
+                        line = line[:idx+1] + dstr
+                    print(line, file=output)
     else:
         print("File does not exist or is not a file.", file=sys.stderr)
 

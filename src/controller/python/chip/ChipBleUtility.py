@@ -76,7 +76,7 @@ def ParseBleEventType(val):
         return BLE_EVENT_TYPE_RX
     if val.lower() == "tx":
         return BLE_EVENT_TYPE_TX
-    raise Exception("Invalid Ble Event Type: " + str(val))
+    raise Exception(f"Invalid Ble Event Type: {str(val)}")
 
 
 class BleTxEvent:
@@ -89,22 +89,22 @@ class BleTxEvent:
 
     def Print(self, prefix=""):
         print(
-            "%sBleEvent Type: %s"
-            % (prefix, ("TX" if self.EventType == BLE_EVENT_TYPE_TX else "ERROR"))
+            f'{prefix}BleEvent Type: {"TX" if self.EventType == BLE_EVENT_TYPE_TX else "ERROR"}'
         )
-        print("%sStatus: %s" % (prefix, str(self.Status)))
+
+        print(f"{prefix}Status: {str(self.Status)}")
 
         if self.SvcId:
-            print("%sSvcId:" % (prefix))
+            print(f"{prefix}SvcId:")
             print(ChipUtility.Hexlify(self.SvcId))
 
         if self.CharId:
-            print("%sCharId:" % (prefix))
+            print(f"{prefix}CharId:")
             print(ChipUtility.Hexlify(self.CharId))
 
     def SetField(self, name, val):
         name = name.lower()
-        if name == "eventtype" or name == "event-type" or name == "type":
+        if name in ["eventtype", "event-type", "type"]:
             self.EventType = ParseBleEventType(val)
         elif name == "status":
             self.Status = val
@@ -113,7 +113,7 @@ class BleTxEvent:
         elif name == "charid":
             self.CharId = val
         else:
-            raise Exception("Invalid BleTxEvent field: " + str(name))
+            raise Exception(f"Invalid BleTxEvent field: {str(name)}")
 
 
 class BleDisconnectEvent:
@@ -124,19 +124,19 @@ class BleDisconnectEvent:
 
     def Print(self, prefix=""):
         print(
-            "%sBleEvent Type: %s"
-            % (prefix, ("DC" if self.EventType == BLE_EVENT_TYPE_DISCONNECT else "ERROR"))
+            f'{prefix}BleEvent Type: {"DC" if self.EventType == BLE_EVENT_TYPE_DISCONNECT else "ERROR"}'
         )
-        print("%sError: %s" % (prefix, str(self.Error)))
+
+        print(f"{prefix}Error: {str(self.Error)}")
 
     def SetField(self, name, val):
         name = name.lower()
-        if name == "eventtype" or name == "event-type" or name == "type":
+        if name in ["eventtype", "event-type", "type"]:
             self.EventType = ParseBleEventType(val)
         elif name == "error":
             self.Error = val
         else:
-            raise Exception("Invalid BleDisconnectEvent field: " + str(name))
+            raise Exception(f"Invalid BleDisconnectEvent field: {str(name)}")
 
 
 class BleRxEvent:
@@ -149,24 +149,24 @@ class BleRxEvent:
 
     def Print(self, prefix=""):
         print(
-            "%sBleEvent Type: %s"
-            % (prefix, ("RX" if self.EventType == BLE_EVENT_TYPE_RX else "ERROR"))
+            f'{prefix}BleEvent Type: {"RX" if self.EventType == BLE_EVENT_TYPE_RX else "ERROR"}'
         )
+
         if self.Buffer:
-            print("%sBuffer:" % (prefix))
+            print(f"{prefix}Buffer:")
             print(ChipUtility.Hexlify(self.Buffer))
 
         if self.SvcId:
-            print("%sSvcId:" % (prefix))
+            print(f"{prefix}SvcId:")
             print(ChipUtility.Hexlify(self.SvcId))
 
         if self.CharId:
-            print("%sCharId:" % (prefix))
+            print(f"{prefix}CharId:")
             print(ChipUtility.Hexlify(self.CharId))
 
     def SetField(self, name, val):
         name = name.lower()
-        if name == "eventtype" or name == "event-type" or name == "type":
+        if name in ["eventtype", "event-type", "type"]:
             self.EventType = ParseBleEventType(val)
         elif name == "buffer":
             self.Buffer = val
@@ -175,7 +175,7 @@ class BleRxEvent:
         elif name == "charid":
             self.CharId = val
         else:
-            raise Exception("Invalid BleRxEvent field: " + str(name))
+            raise Exception(f"Invalid BleRxEvent field: {str(name)}")
 
 
 class BleSubscribeEvent:
@@ -202,7 +202,7 @@ class BleSubscribeEvent:
                  BLE_EVENT_TYPE_SUBSCRIBE else "ERROR"),
             )
         )
-        print("%sStatus: %s" % (prefix, str(self.Status)))
+        print(f"{prefix}Status: {str(self.Status)}")
         print(
             "%sOperation: %s"
             % (
@@ -216,16 +216,16 @@ class BleSubscribeEvent:
         )
 
         if self.SvcId:
-            print("%sSvcId:" % (prefix))
+            print(f"{prefix}SvcId:")
             print(ChipUtility.Hexlify(self.SvcId))
 
         if self.CharId:
-            print("%sCharId:" % (prefix))
+            print(f"{prefix}CharId:")
             print(ChipUtility.Hexlify(self.CharId))
 
     def SetField(self, name, val):
         name = name.lower()
-        if name == "eventtype" or name == "event-type" or name == "type":
+        if name in ["eventtype", "event-type", "type"]:
             self.EventType = ParseBleEventType(val)
         elif name == "status":
             self.Status = val
@@ -236,7 +236,7 @@ class BleSubscribeEvent:
         elif name == "operation":
             self.Operation = val
         else:
-            raise Exception("Invalid BleSubscribeEvent field: " + str(name))
+            raise Exception(f"Invalid BleSubscribeEvent field: {str(name)}")
 
 
 class BleTxEventStruct(Structure):

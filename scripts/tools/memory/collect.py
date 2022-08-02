@@ -32,7 +32,6 @@ import memdf.select
 
 
 def main(argv):
-    status = 0
     try:
         config = memdf.collect.parse_args({
             **memdf.select.CONFIG,
@@ -44,7 +43,7 @@ def main(argv):
     except Exception as exception:
         raise exception
 
-    return status
+    return 0
 
 
 if __name__ == '__main__':

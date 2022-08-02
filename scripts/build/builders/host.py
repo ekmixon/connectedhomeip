@@ -167,7 +167,7 @@ class HostBoard(Enum):
             # standardize some common platforms
             if arch == 'x86_64':
                 arch = 'x64'
-            elif arch == 'i386' or arch == 'i686':
+            elif arch in ['i386', 'i686']:
                 arch = 'x86'
             elif arch in ('aarch64', 'aarch64_be', 'armv8b', 'armv8l'):
                 arch = 'arm64'
@@ -298,9 +298,7 @@ class HostBuilder(GnBuilder):
             raise Exception('Unknown host board type: %r' % self)
 
     def GnBuildEnv(self):
-        if self.board == HostBoard.NATIVE:
-            return None
-        elif self.board == HostBoard.FAKE:
+        if self.board in [HostBoard.NATIVE, HostBoard.FAKE]:
             return None
         elif self.board == HostBoard.ARM64:
             return {
@@ -324,12 +322,8 @@ class HostBuilder(GnBuilder):
             if os.path.isdir(path):
                 for root, dirs, files in os.walk(path):
                     for file in files:
-                        outputs.update({
-                            file: os.path.join(root, file)
-                        })
+                        outputs[file] = os.path.join(root, file)
             else:
-                outputs.update({
-                    name: os.path.join(self.output_dir, name)
-                })
+                outputs[name] = os.path.join(self.output_dir, name)
 
         return outputs

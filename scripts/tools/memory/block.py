@@ -43,7 +43,6 @@ BLOCKLIST_CONFIG: ConfigDescription = {
 
 
 def main(argv):
-    status = 0
     try:
 
         config = Config().init({
@@ -71,7 +70,7 @@ def main(argv):
     except Exception as exception:
         raise exception
 
-    return status
+    return 0
 
 
 if __name__ == '__main__':

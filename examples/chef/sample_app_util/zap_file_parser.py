@@ -101,9 +101,7 @@ def _load_matter_device_types() -> Dict[Union[int, str], Union[int, str]]:
     """
     with open(_MATTER_DEVICE_LIST) as f:
         mapping = json.loads(f.read())
-        reverse_mapping = {}
-        for key, val in mapping.items():
-            reverse_mapping[val] = key
+        reverse_mapping = {val: key for key, val in mapping.items()}
         mapping.update(reverse_mapping)
     return mapping
 

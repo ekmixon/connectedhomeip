@@ -91,10 +91,8 @@ REPORT_BY_CONFIG: ConfigDescription = {
 
 
 def demangle(symbol: str):
-    try:
+    with contextlib.suppress(cxxfilt.InvalidName):
         symbol = cxxfilt.demangle(symbol, external_only=False)
-    except cxxfilt.InvalidName:
-        pass
     return symbol
 
 
@@ -153,10 +151,7 @@ def postprocess_output_metadata(config: Config, key: str,
     assert key == 'output.metadata'
     metadata = {}
     for s in config.get(key):
-        if ':' in s:
-            k, v = s.split(':', 1)
-        else:
-            k, v = s, True
+        k, v = s.split(':', 1) if ':' in s else (s, True)
         metadata[k] = v
     config.put(key, metadata)
 
@@ -180,9 +175,8 @@ def open_output(config: Config,
             return
     if suffix:
         filename += suffix
-    f = open(filename, 'w')
-    yield f
-    f.close()
+    with open(filename, 'w') as f:
+        yield f
 
 
 # Single-table writers.
@@ -405,7 +399,7 @@ class MarkdownWriter(Writer):
                  defaults: Optional[Dict] = None,
                  overrides: Optional[Dict] = None):
         d = {'index': False}
-        d.update(defaults or {})
+        d |= (defaults or {})
         super().__init__(write_one, write_markdown, d, overrides)
 
 
@@ -422,7 +416,7 @@ class CsvWriter(Writer):
                  defaults: Optional[Dict] = None,
                  overrides: Optional[Dict] = None):
         d = {'index': False}
-        d.update(defaults or {})
+        d |= (defaults or {})
         super().__init__(write_many, write_csv, d, overrides)
         self.overrides['hierify'] = False
 

@@ -38,25 +38,19 @@ def FieldToGlobalName(field: Field, context: TypeLookupContext) -> Union[str, No
         return None
 
     actual = ParseDataType(field.data_type, context)
-    if type(actual) == IdlEnumType:
+    if type(actual) in [IdlEnumType, IdlBitmapType]:
         actual = actual.base_type
-    elif type(actual) == IdlBitmapType:
-        actual = actual.base_type
-
     if type(actual) == BasicString:
-        if actual.is_binary:
-            return 'OctetString'
-        else:
-            return 'CharString'
+        return 'OctetString' if actual.is_binary else 'CharString'
     elif type(actual) == BasicInteger:
         # TODO: unclear why this, but tries to match zap:
         if actual.idl_name.lower() in ['vendor_id', 'fabric_idx']:
             return None
 
         if actual.is_signed:
-            return "Int{}s".format(actual.power_of_two_bits)
+            return f"Int{actual.power_of_two_bits}s"
         else:
-            return "Int{}u".format(actual.power_of_two_bits)
+            return f"Int{actual.power_of_two_bits}u"
     elif type(actual) == FundamentalType:
         if actual == FundamentalType.BOOL:
             return 'Boolean'
@@ -80,21 +74,16 @@ def CallbackName(attr: Attribute, cluster: Cluster, context: TypeLookupContext) 
     For specific types (e.g. A struct) codegen will generate its own callback name
     specific to that type.
     """
-    global_name = FieldToGlobalName(attr.definition, context)
+    if global_name := FieldToGlobalName(attr.definition, context):
+        return f'CHIP{capitalcase(global_name)}AttributeCallback'
 
-    if global_name:
-        return 'CHIP{}AttributeCallback'.format(capitalcase(global_name))
-
-    return 'CHIP{}{}AttributeCallback'.format(
-        capitalcase(cluster.name),
-        capitalcase(attr.definition.name)
-    )
+    return f'CHIP{capitalcase(cluster.name)}{capitalcase(attr.definition.name)}AttributeCallback'
 
 
 def CommandCallbackName(command: Command, cluster: Cluster):
     if command.output_param.lower() == 'defaultsuccess':
         return 'DefaultSuccess'
-    return '{}Cluster{}'.format(cluster.name, command.output_param)
+    return f'{cluster.name}Cluster{command.output_param}'
 
 
 def attributesWithSupportedCallback(attrs, context: TypeLookupContext):
@@ -216,16 +205,16 @@ class EncodableValue:
         return result
 
     def get_underlying_struct(self):
-        s = self.context.find_struct(self.data_type.name)
-        if not s:
-            raise Exception("Struct %s not found" % self.data_type.name)
-        return s
+        if s := self.context.find_struct(self.data_type.name):
+            return s
+        else:
+            raise Exception(f"Struct {self.data_type.name} not found")
 
     def get_underlying_enum(self):
-        e = self.context.find_enum(self.data_type.name)
-        if not e:
-            raise Exception("Enum %s not found" % self.data_type.name)
-        return e
+        if e := self.context.find_enum(self.data_type.name):
+            return e
+        else:
+            raise Exception(f"Enum {self.data_type.name} not found")
 
     @property
     def boxed_java_type(self):
@@ -241,15 +230,9 @@ class EncodableValue:
             else:
                 raise Error("Unknown fundamental type")
         elif type(t) == BasicInteger:
-            if t.byte_count >= 4:
-                return "Long"
-            else:
-                return "Integer"
+            return "Long" if t.byte_count >= 4 else "Integer"
         elif type(t) == BasicString:
-            if t.is_binary:
-                return "byte[]"
-            else:
-                return "String"
+            return "byte[]" if t.is_binary else "String"
         elif type(t) == IdlEnumType:
             return "Integer"
         elif type(t) == IdlBitmapType:
@@ -278,21 +261,15 @@ class EncodableValue:
             else:
                 raise Error("Unknown fundamental type")
         elif type(t) == BasicInteger:
-            if t.byte_count >= 4:
-                return "Ljava/lang/Long;"
-            else:
-                return "Ljava/lang/Integer;"
+            return "Ljava/lang/Long;" if t.byte_count >= 4 else "Ljava/lang/Integer;"
         elif type(t) == BasicString:
-            if t.is_binary:
-                return "[B"
-            else:
-                return "Ljava/lang/String;"
+            return "[B" if t.is_binary else "Ljava/lang/String;"
         elif type(t) == IdlEnumType:
             return "Ljava/lang/Integer;"
         elif type(t) == IdlBitmapType:
             return "Ljava/lang/Integer;"
         else:
-            return "Lchip/devicecontroller/ChipStructs${}Cluster{};".format(self.context.cluster.name, self.data_type.name)
+            return f"Lchip/devicecontroller/ChipStructs${self.context.cluster.name}Cluster{self.data_type.name};"
 
 
 def EncodableValueFrom(field: Field, context: TypeLookupContext) -> EncodableValue:
@@ -377,18 +354,19 @@ class JavaGenerator(CodeGenerator):
 
             self.internal_render_one_output(
                 template_path="java/ChipClustersRead.jinja",
-                output_file_name="jni/%sClient-ReadImpl.cpp" % cluster.name,
+                output_file_name=f"jni/{cluster.name}Client-ReadImpl.cpp",
                 vars={
                     'cluster': cluster,
                     'typeLookup': TypeLookupContext(self.idl, cluster),
-                }
+                },
             )
+
 
             self.internal_render_one_output(
                 template_path="java/ChipClustersCpp.jinja",
-                output_file_name="jni/%sClient-InvokeSubscribeImpl.cpp" % cluster.name,
+                output_file_name=f"jni/{cluster.name}Client-InvokeSubscribeImpl.cpp",
                 vars={
                     'cluster': cluster,
                     'typeLookup': TypeLookupContext(self.idl, cluster),
-                }
+                },
             )

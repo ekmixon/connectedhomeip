@@ -86,18 +86,20 @@ class Esp32App(Enum):
 
     @property
     def FlashBundleName(self):
-        if not self.AppNamePrefix:
-            return None
-
-        return self.AppNamePrefix + '.flashbundle.txt'
+        return f'{self.AppNamePrefix}.flashbundle.txt' if self.AppNamePrefix else None
 
     def IsCompatible(self, board: Esp32Board):
         if board == Esp32Board.QEMU:
             return self == Esp32App.TESTS
         elif board == Esp32Board.M5Stack:
-            return self == Esp32App.ALL_CLUSTERS or self == Esp32App.ALL_CLUSTERS_MINIMAL or self == Esp32App.OTA_REQUESTOR
+            return self in [
+                Esp32App.ALL_CLUSTERS,
+                Esp32App.ALL_CLUSTERS_MINIMAL,
+                Esp32App.OTA_REQUESTOR,
+            ]
+
         elif board == Esp32Board.C3DevKit:
-            return self == Esp32App.ALL_CLUSTERS or self == Esp32App.ALL_CLUSTERS_MINIMAL
+            return self in [Esp32App.ALL_CLUSTERS, Esp32App.ALL_CLUSTERS_MINIMAL]
         else:
             return (board == Esp32Board.DevKitC) and (self != Esp32App.TESTS)
 
@@ -114,11 +116,11 @@ def DefaultsFileName(board: Esp32Board, app: Esp32App, enable_rpcs: bool):
 
     rpc = "_rpc" if enable_rpcs else ""
     if board == Esp32Board.DevKitC:
-        return 'sdkconfig{}.defaults'.format(rpc)
+        return f'sdkconfig{rpc}.defaults'
     elif board == Esp32Board.M5Stack:
-        return 'sdkconfig_m5stack{}.defaults'.format(rpc)
+        return f'sdkconfig_m5stack{rpc}.defaults'
     elif board == Esp32Board.C3DevKit:
-        return 'sdkconfig_c3devkit{}.defaults'.format(rpc)
+        return f'sdkconfig_c3devkit{rpc}.defaults'
     else:
         raise Exception('Unknown board type')
 
@@ -146,8 +148,13 @@ class Esp32Builder(Builder):
     def _IdfEnvExecute(self, cmd, title=None):
         # Run activate.sh after export.sh to ensure using the chip environment.
         self._Execute(
-            ['bash', '-c', 'source $IDF_PATH/export.sh; source scripts/activate.sh; %s' % cmd],
-            title=title)
+            [
+                'bash',
+                '-c',
+                f'source $IDF_PATH/export.sh; source scripts/activate.sh; {cmd}',
+            ],
+            title=title,
+        )
 
     @property
     def ExamplePath(self):
@@ -161,12 +168,14 @@ class Esp32Builder(Builder):
             self.board, self.app, self.enable_rpcs))
 
         if not self._runner.dry_run and not os.path.exists(defaults):
-            raise Exception('SDK defaults file missing: %s' % defaults)
+            raise Exception(f'SDK defaults file missing: {defaults}')
 
         defaults_out = os.path.join(self.output_dir, 'sdkconfig.defaults')
 
-        self._Execute(['mkdir', '-p', self.output_dir],
-                      title='Generating ' + self.identifier)
+        self._Execute(
+            ['mkdir', '-p', self.output_dir], title=f'Generating {self.identifier}'
+        )
+
         self._Execute(['cp', defaults, defaults_out])
         self._Execute(
             ['rm', '-f', os.path.join(self.ExamplePath, 'sdkconfig')])
@@ -203,24 +212,26 @@ class Esp32Builder(Builder):
             out=shlex.quote(self.output_dir)
         )
 
-        self._IdfEnvExecute(cmd, title='Building ' + self.identifier)
+        self._IdfEnvExecute(cmd, title=f'Building {self.identifier}')
 
     def build_outputs(self):
         if self.app == Esp32App.TESTS:
             # Include the runnable image names as artifacts
-            result = dict()
+            result = {}
             with open(os.path.join(self.output_dir, 'test_images.txt'), 'rt') as f:
-                for name in f.readlines():
+                for name in f:
                     name = name.strip()
                     result[name] = os.path.join(self.output_dir, name)
 
             return result
 
         return {
-            self.app.AppNamePrefix + '.elf':
-                os.path.join(self.output_dir, self.app.AppNamePrefix + '.elf'),
-            self.app.AppNamePrefix + '.map':
-                os.path.join(self.output_dir, self.app.AppNamePrefix + '.map'),
+            f'{self.app.AppNamePrefix}.elf': os.path.join(
+                self.output_dir, f'{self.app.AppNamePrefix}.elf'
+            ),
+            f'{self.app.AppNamePrefix}.map': os.path.join(
+                self.output_dir, f'{self.app.AppNamePrefix}.map'
+            ),
         }
 
     def flashbundle(self):

@@ -30,14 +30,11 @@ class HelperScripts:
            values. Currently this reads the root node's DeviceTypeList and
            PartsList, and the server/client list for every endpoint in the
            PartsList."""
-        out = {}
-
         (status, device_types) = self.rpcs.chip.rpc.Descriptor.DeviceTypeList(endpoint=0)
         if not status.ok():
             raise Exception("Failed to read ep0 device type list: %s", status)
 
-        out["device_types"] = list(
-            map(lambda dt: dt.device_type, device_types))
+        out = {"device_types": list(map(lambda dt: dt.device_type, device_types))}
         (status, parts_list) = self.rpcs.chip.rpc.Descriptor.PartsList(endpoint=0)
         if not status.ok():
             raise Exception("Failed to read ep0 parts list: %s", status)

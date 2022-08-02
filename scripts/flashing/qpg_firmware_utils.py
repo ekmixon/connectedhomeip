@@ -72,8 +72,7 @@ class Flasher(firmware_utils.Flasher):
 
     def flash(self, image):
         """Flash image."""
-        self.log(1, "Copying to {} drive {}".format(
-            image, self.option.drive or "None"))
+        self.log(1, f'Copying to {image} drive {self.option.drive or "None"}')
         if not self.option.drive:
             self.log(0, "--drive or -d required for copy action")
             self.err = 1
@@ -81,16 +80,18 @@ class Flasher(firmware_utils.Flasher):
 
         # Check for drive mount
         if not os.path.exists(self.option.drive):
-            self.log(0, "Drive '{}' does not exist. Is the USB device mounted correctly ?".format(
-                self.option.drive))
+            self.log(
+                0,
+                f"Drive '{self.option.drive}' does not exist. Is the USB device mounted correctly ?",
+            )
+
             self.err = 2
             return self
 
         # Check for valid mBed device
         mbed_marker = os.path.join(self.option.drive, 'MBED.HTM')
         if not os.path.exists(mbed_marker):
-            self.log(0, "Drive '{}' not a path to an MBED device".format(
-                self.option.drive))
+            self.log(0, f"Drive '{self.option.drive}' not a path to an MBED device")
             self.err = 3
             return self
 
@@ -107,25 +108,19 @@ class Flasher(firmware_utils.Flasher):
         """Perform actions on the device according to self.option."""
         self.log(3, 'Options:', self.option)
 
-        if self.option.erase:
-            if self.erase().err:
-                return self
+        if self.option.erase and self.erase().err:
+            return self
 
         if self.option.application:
             application = self.option.application
             if self.flash(application).err:
                 return self
-            if self.option.verify_application:
-                if self.verify(application).err:
-                    return self
+            if self.option.verify_application and self.verify(application).err:
+                return self
             if self.option.reset is None:
                 self.option.reset = True
 
-        if self.option.reset:
-            if self.reset().err:
-                return self
-
-        return self
+        return self if self.option.reset and self.reset().err else self
 
 
 if __name__ == '__main__':

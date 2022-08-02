@@ -58,10 +58,7 @@ class InstalledScriptInfo:
         self.installName = os.path.splitext(name)[0]
 
 
-if args.server:
-    chipDLLName = "_ChipServer.so"
-else:
-    chipDLLName = "_ChipDeviceCtrl.so"
+chipDLLName = "_ChipServer.so" if args.server else "_ChipDeviceCtrl.so"
 packageName = args.package_name
 chipPackageVer = args.build_number
 

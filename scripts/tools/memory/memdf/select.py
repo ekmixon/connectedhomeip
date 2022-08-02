@@ -68,24 +68,21 @@ def postprocess_selections(config: Config, key: str, info: Mapping) -> None:
 
 def select_and_ignore_config_desc(key: str) -> ConfigDescription:
     return {
-        Config.group_map(key): {
-            'group': 'select'
-        },
+        Config.group_map(key): {'group': 'select'},
         f'{key}.select': {
-            'help':
-            f'{key.capitalize()}(s) to process; otherwise all not ignored',
+            'help': f'{key.capitalize()}(s) to process; otherwise all not ignored',
             'metavar': 'NAME',
             'default': [],
             'argparse': {
                 'alias': [f'--{key}'],
             },
-            'postprocess': postprocess_selections
+            'postprocess': postprocess_selections,
         },
         f'{key}.select-all': {
             'help': f'Select all {key}s',
             'default': False,
         },
-        key + '.ignore': {
+        f'{key}.ignore': {
             'help': f'{key.capitalize()}(s) to ignore',
             'metavar': 'NAME',
             'default': [],
@@ -119,9 +116,7 @@ def is_selected(config: Config, column, name) -> bool:
     """Test `name` against the configured selection criteria for `column`."""
     if config.getl([column, 'select-all']):
         return True
-    if name in config.getl([column, 'select'], []):
-        return True
-    return False
+    return name in config.getl([column, 'select'], [])
 
 
 def synthesize_region(config: Config, df: DF, column: str) -> DF:
@@ -150,8 +145,7 @@ def synthesize_column(config: Config, df: DF, column: str) -> DF:
 def select_configured_column(config: Config, df: DF, column: str) -> DF:
     """Apply configured selection options to a column"""
     if column in df and not config.getl([column, 'select-all']):
-        selections = config.getl([column, 'select'], [])
-        if selections:
+        if selections := config.getl([column, 'select'], []):
             df = df.loc[df[column].isin(selections)]
     return df
 

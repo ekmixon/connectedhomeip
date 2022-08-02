@@ -63,22 +63,22 @@ def main(log_level, rules, idl_path):
     )
 
     lint_rules = []
-    logging.info("Loading rules from %s" % rules)
+    logging.info(f"Loading rules from {rules}")
     lint_rules.extend(idl.lint.CreateParser(rules).parse())
 
-    logging.info("Parsing idl from %s" % idl_path)
+    logging.info(f"Parsing idl from {idl_path}")
     idl_tree = matter_idl_parser.CreateParser().parse(open(idl_path, "rt").read(), file_name=idl_path)
 
     logging.info("Running %d lint rules" % len(lint_rules))
 
     errors = []
     for rule in lint_rules:
-        logging.info("   Running %s" % rule.name)
+        logging.info(f"   Running {rule.name}")
         errors.extend(rule.LintIdl(idl_tree))
     logging.info("Done")
 
     for e in errors:
-        logging.error("ERROR: %s" % e)
+        logging.error(f"ERROR: {e}")
 
     if errors:
         logging.error("Found %d lint errors" % len(errors))

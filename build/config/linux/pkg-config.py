@@ -78,8 +78,8 @@ def SetConfigPath(options):
     sysroot = options.sysroot
     assert sysroot
 
-    libdir = sysroot + '/usr/' + options.system_libdir + '/pkgconfig'
-    libdir += ':' + sysroot + '/usr/share/pkgconfig'
+    libdir = f'{sysroot}/usr/{options.system_libdir}/pkgconfig'
+    libdir += f':{sysroot}/usr/share/pkgconfig'
     os.environ['PKG_CONFIG_LIBDIR'] = libdir
     return libdir
 
@@ -99,29 +99,23 @@ def GetPkgConfigPrefixToStrip(options, args):
     # from pkg-config's |prefix| variable.
     prefix = subprocess.check_output([options.pkg_config,
                                       "--variable=prefix"] + args, env=os.environ).decode('utf-8')
-    if prefix[-4] == '/usr':
-        return prefix[4:]
-    return prefix
+    return prefix[4:] if prefix[-4] == '/usr' else prefix
 
 
 def MatchesAnyRegexp(flag, list_of_regexps):
     """Returns true if the first argument matches any regular expression in the
     given list."""
-    for regexp in list_of_regexps:
-        if regexp.search(flag) != None:
-            return True
-    return False
+    return any(regexp.search(flag) != None for regexp in list_of_regexps)
 
 
 def RewritePath(path, strip_prefix, sysroot):
     """Rewrites a path by stripping the prefix and prepending the sysroot."""
-    if os.path.isabs(path) and not path.startswith(sysroot):
-        if path.startswith(strip_prefix):
-            path = path[len(strip_prefix):]
-        path = path.lstrip('/')
-        return os.path.join(sysroot, path)
-    else:
+    if not os.path.isabs(path) or path.startswith(sysroot):
         return path
+    if path.startswith(strip_prefix):
+        path = path[len(strip_prefix):]
+    path = path.lstrip('/')
+    return os.path.join(sysroot, path)
 
 
 def main():
@@ -146,9 +140,7 @@ def main():
     # Make a list of regular expressions to strip out.
     strip_out = []
     if options.strip_out != None:
-        for regexp in options.strip_out:
-            strip_out.append(re.compile(regexp))
-
+        strip_out.extend(re.compile(regexp) for regexp in options.strip_out)
     if options.sysroot:
         libdir = SetConfigPath(options)
         if options.debug:
@@ -160,9 +152,15 @@ def main():
     if options.atleast_version:
         # When asking for the return value, just run pkg-config and print the return
         # value, no need to do other work.
-        if not subprocess.call([options.pkg_config,
-                                "--atleast-version=" + options.atleast_version] +
-                               args):
+        if not subprocess.call(
+            (
+                [
+                    options.pkg_config,
+                    f"--atleast-version={options.atleast_version}",
+                ]
+                + args
+            )
+        ):
             print("true")
         else:
             print("false")
@@ -240,12 +238,7 @@ def main():
             # Don't allow libraries to control ld flags.  These should be specified
             # only in build files.
             pass
-        elif flag == '-pthread':
-            # Many libs specify "-pthread" which we don't need since we always include
-            # this anyway. Removing it here prevents a bunch of duplicate inclusions
-            # on the command line.
-            pass
-        else:
+        elif flag != '-pthread':
             cflags.append(flag)
 
     # Output a GN array, the first one is the cflags, the second are the libs. The

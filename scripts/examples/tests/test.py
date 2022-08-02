@@ -28,7 +28,7 @@ SCRIPT_ROOT = os.path.dirname(__file__)
 
 def build_expected_output(root: str, out: str) -> List[str]:
     with open(os.path.join(SCRIPT_ROOT, 'expected_test_cmakelists.txt'), 'rt') as f:
-        for l in f.readlines():
+        for l in f:
             yield l.replace("{root}", root).replace("{out}", out)
 
 
@@ -43,8 +43,7 @@ def build_actual_output(root: str, out: str) -> List[str]:
     ], stdout=subprocess.PIPE, check=True, encoding='UTF-8', )
 
     with open(cmake, 'rt') as f:
-        for l in f.readlines():
-            yield l
+        yield from f
 
 
 def main():
@@ -54,15 +53,13 @@ def main():
     ROOT = '/TEST/BUILD/ROOT'
     OUT = '/OUTPUT/DIR'
 
-    expected = [l for l in build_expected_output(ROOT, OUT)]
-    actual = [l for l in build_actual_output(ROOT, OUT)]
+    expected = list(build_expected_output(ROOT, OUT))
+    actual = list(build_actual_output(ROOT, OUT))
 
-    diffs = [line for line in difflib.unified_diff(expected, actual)]
-
-    if diffs:
+    if diffs := list(difflib.unified_diff(expected, actual)):
         logging.error("DIFFERENCE between expected and generated output")
         for l in diffs:
-            logging.warning("  " + l.strip())
+            logging.warning(f"  {l.strip()}")
         sys.exit(1)
 
 

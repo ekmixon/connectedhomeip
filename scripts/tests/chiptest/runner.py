@@ -49,15 +49,18 @@ class LogPipe(threading.Thread):
         self.start()
 
     def CapturedLogContains(self, txt: str, index=0):
-        for i, line in enumerate(self.captured_logs[index:]):
-            if txt in line:
-                return True, i
-        return False, len(self.captured_logs)
+        return next(
+            (
+                (True, i)
+                for i, line in enumerate(self.captured_logs[index:])
+                if txt in line
+            ),
+            (False, len(self.captured_logs)),
+        )
 
     def FindLastMatchingLine(self, matcher):
         for l in reversed(self.captured_logs):
-            match = re.match(matcher, l)
-            if match:
+            if match := re.match(matcher, l):
                 return match
         return None
 
@@ -94,11 +97,7 @@ class RunnerWaitQueue:
         self.timed_out = False
 
     def __wait(self, process, userdata):
-        if userdata is None:
-            # We're the main process for this wait queue.
-            timeout = self.timeout_seconds
-        else:
-            timeout = None
+        timeout = self.timeout_seconds if userdata is None else None
         try:
             process.wait(timeout)
         except subprocess.TimeoutExpired:
@@ -124,11 +123,17 @@ class Runner:
 
     def RunSubprocess(self, cmd, name, wait=True, dependencies=[], timeout_seconds: typing.Optional[int] = None):
         outpipe = LogPipe(
-            logging.DEBUG, capture_delegate=self.capture_delegate,
-            name=name + ' OUT')
+            logging.DEBUG,
+            capture_delegate=self.capture_delegate,
+            name=f'{name} OUT',
+        )
+
         errpipe = LogPipe(
-            logging.INFO, capture_delegate=self.capture_delegate,
-            name=name + ' ERR')
+            logging.INFO,
+            capture_delegate=self.capture_delegate,
+            name=f'{name} ERR',
+        )
+
 
         if self.capture_delegate:
             self.capture_delegate.Log(name, 'EXECUTING %r' % cmd)

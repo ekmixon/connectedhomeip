@@ -369,8 +369,7 @@ def query_build_sizes(config: Config, db: SizeDatabase,
     logging.debug('Query: %s', query)
 
     cur = db.execute(query)
-    rows = cur.fetchall()
-    if rows:
+    if rows := cur.fetchall():
         df = pd.DataFrame(rows, columns=columns)
         df.attrs = {
             'name': f'qbs-{build}',
@@ -382,7 +381,6 @@ def query_build_sizes(config: Config, db: SizeDatabase,
 
 
 def main(argv):
-    status = 0
     try:
         cfg = {
             **memdf.util.config.CONFIG,
@@ -410,8 +408,7 @@ def main(argv):
             logging.debug('With: %s', values)
             cur = db.execute(query, values)
             columns = [i[0] for i in cur.description]
-            rows = cur.fetchall()
-            if rows:
+            if rows := cur.fetchall():
                 df = pd.DataFrame(rows, columns=columns)
                 df.attrs = {'name': f'query{q}', 'title': title}
                 for f in info['sql'].get('postprocess', []):
@@ -436,7 +433,7 @@ def main(argv):
     except Exception as exception:
         raise exception
 
-    return status
+    return 0
 
 
 if __name__ == '__main__':

@@ -130,7 +130,7 @@ class ValidateMandatoryClusterParam(Mutator):
             insert_index += 1
 
         # Insert the new entry in the right place, with no renumbering
-        new_param_list = param_list[0:insert_index]
+        new_param_list = param_list[:insert_index]
         new_param_list.append(self._param_entry)
         new_param_list.extend(param_list[insert_index:])
 
@@ -157,10 +157,10 @@ class ValidateMandatoryClusterParam(Mutator):
         if (self._param_key != "commands") and (not candidate.get("enabled")):
             return False
 
-        if self._cluster_specific_code is not None and self._cluster_specific_code != candidate["code"]:
-            return False
-
-        return True
+        return (
+            self._cluster_specific_code is None
+            or self._cluster_specific_code == candidate["code"]
+        )
 
     def _attributeSpecificChecks(self, param: object, cluster_name):
         if not param["included"]:
@@ -234,11 +234,9 @@ def mutateZapbody(body: object, mutators: List[Mutator]):
             mutator.handle(current_item)
 
         if isinstance(current_item, list):
-            for item in current_item:
-                work_list.append(item)
+            work_list.extend(iter(current_item))
         elif isinstance(current_item, dict):
-            for item in current_item.values():
-                work_list.append(item)
+            work_list.extend(iter(current_item.values()))
 
 
 def setupArgumentsParser():
@@ -257,7 +255,6 @@ def setupArgumentsParser():
 def main():
     args = setupArgumentsParser()
 
-    mutators = []
     add_missing_cluster_revision = ValidateMandatoryClusterParam(
         _DEFAULT_CLUSTER_REVISION_ATTRIBUTE, args)
     add_missing_feature_map = ValidateMandatoryClusterParam(
@@ -267,13 +264,17 @@ def main():
     add_general_diagnostic_test_event_trigger_command = ValidateMandatoryClusterParam(
         _TEST_EVENT_TRIGGERS_CLIENT_COMMAND, args)
 
-    mutators.extend([add_missing_cluster_revision, add_missing_feature_map,
-                    add_general_diagnostic_test_event_trigger_enabled, add_general_diagnostic_test_event_trigger_command])
+    mutators = [
+        add_missing_cluster_revision,
+        add_missing_feature_map,
+        add_general_diagnostic_test_event_trigger_enabled,
+        add_general_diagnostic_test_event_trigger_command,
+    ]
 
     for zap_filename in args.zap_filenames:
         body = loadZapfile(zap_filename)
 
-        print("==== Processing %s ====" % zap_filename)
+        print(f"==== Processing {zap_filename} ====")
         mutateZapbody(
             body, mutators=mutators)
         saveZapfile(body, zap_filename)

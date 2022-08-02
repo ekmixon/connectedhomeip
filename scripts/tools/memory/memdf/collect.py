@@ -106,10 +106,11 @@ def postprocess_symbols(config: Config, symbols: SymbolDF) -> SymbolDF:
                     current_file = simplify_source(current_file, prefixes)
 
             elif symbol.type == 'NOTYPE':
-                if symbol.symbol.startswith('$'):
-                    if current_arm or symbol.symbol in ARM_SPECIAL_SYMBOLS:
-                        current_arm = symbol.symbol
-                        arm_symbols[current_arm] = True
+                if symbol.symbol.startswith('$') and (
+                    current_arm or symbol.symbol in ARM_SPECIAL_SYMBOLS
+                ):
+                    current_arm = symbol.symbol
+                    arm_symbols[current_arm] = True
             files.append(current_file)
             arms.append(current_arm)
 
@@ -226,12 +227,14 @@ def fill_holes(config: Config, symbols: SymbolDF, sections: SectionDF) -> DFs:
             if symbol_address_section != symbol.section:
                 continue
             # Starting or switching sections.
-            if previous_symbol and section_range:
-                # previous_symbol is the last in its section.
-                if current_address < section_range[-1] + 1:
-                    use, row = fill_gap(previous_symbol, previous_symbol,
-                                        current_address, section_range[-1] + 1)
-                    new_symbols[use].append(row)
+            if (
+                previous_symbol
+                and section_range
+                and current_address < section_range[-1] + 1
+            ):
+                use, row = fill_gap(previous_symbol, previous_symbol,
+                                    current_address, section_range[-1] + 1)
+                new_symbols[use].append(row)
             # Start of section.
             previous_symbol = None
             section_range = section_to_range.get(symbol.section)
@@ -287,9 +290,9 @@ def postprocess_collected(config: Config, dfs: DFs) -> None:
                     config, dfs[c.name], column)
 
     for df in dfs.values():
-        if demangle := set((c for c in df.columns if c.endswith('symbol'))):
+        if demangle := {c for c in df.columns if c.endswith('symbol')}:
             df.attrs['demangle'] = demangle
-        if hexify := set((c for c in df.columns if c.endswith('address'))):
+        if hexify := {c for c in df.columns if c.endswith('address')}:
             df.attrs['hexify'] = hexify
 
 
@@ -309,7 +312,7 @@ def collect_files(config: Config,
                   files: Optional[List[str]] = None,
                   method: Optional[str] = None) -> DFs:
     """Read a filtered memory map from a set of files."""
-    filenames = files if files else config.get('args.inputs', [])
+    filenames = files or config.get('args.inputs', [])
     if method is None:
         method = config.get('collect.method', 'csv')
     frames: Dict[str, List[DF]] = {}
@@ -320,9 +323,7 @@ def collect_files(config: Config,
             if k not in frames:
                 frames[k] = []
             frames[k].append(frame)
-    dfs = {}
-    for k, v in frames.items():
-        dfs[k] = pd.concat(v, ignore_index=True)
+    dfs = {k: pd.concat(v, ignore_index=True) for k, v in frames.items()}
     postprocess_collected(config, dfs)
     return dfs
 

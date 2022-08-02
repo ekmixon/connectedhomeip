@@ -74,19 +74,40 @@ class TestParser(unittest.TestCase):
             }
         """)
 
-        expected = Idl(structs=[
-            Struct(name='Something',
-                   fields=[
+        expected = Idl(
+            structs=[
+                Struct(
+                    name='Something',
+                    fields=[
                         Field(
-                            data_type=DataType(name="CHAR_STRING"), code=1, name="astring", ),
-                        Field(data_type=DataType(name="CLUSTER_ID"), code=2, name="idlist", is_list=True, attributes=set(
-                            [FieldAttribute.OPTIONAL])),
-                        Field(data_type=DataType(name="int"), code=0x123, name="valueThatIsNullable", attributes=set(
-                            [FieldAttribute.NULLABLE])),
-                        Field(data_type=DataType(name="char_string", max_length=123),
-                              code=222, name="sized_string", attributes=set()),
-                   ])]
+                            data_type=DataType(name="CHAR_STRING"),
+                            code=1,
+                            name="astring",
+                        ),
+                        Field(
+                            data_type=DataType(name="CLUSTER_ID"),
+                            code=2,
+                            name="idlist",
+                            is_list=True,
+                            attributes={FieldAttribute.OPTIONAL},
+                        ),
+                        Field(
+                            data_type=DataType(name="int"),
+                            code=0x123,
+                            name="valueThatIsNullable",
+                            attributes={FieldAttribute.NULLABLE},
+                        ),
+                        Field(
+                            data_type=DataType(name="char_string", max_length=123),
+                            code=222,
+                            name="sized_string",
+                            attributes=set(),
+                        ),
+                    ],
+                )
+            ]
         )
+
         self.assertEqual(actual, expected)
 
     def test_cluster_attribute(self):
@@ -99,21 +120,53 @@ class TestParser(unittest.TestCase):
             }
         """)
 
-        expected = Idl(clusters=[
-            Cluster(side=ClusterSide.SERVER,
+        expected = Idl(
+            clusters=[
+                Cluster(
+                    side=ClusterSide.SERVER,
                     name="MyCluster",
                     code=0x321,
                     attributes=[
-                        Attribute(tags=set([AttributeTag.READABLE]), definition=Field(
-                            data_type=DataType(name="int8u"), code=1, name="roAttr")),
-                        Attribute(tags=set([AttributeTag.READABLE, AttributeTag.WRITABLE]), definition=Field(
-                            data_type=DataType(name="int32u"), code=123, name="rwAttr", is_list=True)),
-                        Attribute(tags=set([AttributeTag.NOSUBSCRIBE, AttributeTag.READABLE]), definition=Field(
-                            data_type=DataType(name="int8s"), code=0xAA, name="nosub", is_list=True)),
-                        Attribute(tags=set([AttributeTag.READABLE]), definition=Field(
-                            data_type=DataType(name="int8s"), code=0xAB, name="isNullable", attributes=set([FieldAttribute.NULLABLE]))),
-                    ]
-                    )])
+                        Attribute(
+                            tags={AttributeTag.READABLE},
+                            definition=Field(
+                                data_type=DataType(name="int8u"),
+                                code=1,
+                                name="roAttr",
+                            ),
+                        ),
+                        Attribute(
+                            tags={AttributeTag.READABLE, AttributeTag.WRITABLE},
+                            definition=Field(
+                                data_type=DataType(name="int32u"),
+                                code=123,
+                                name="rwAttr",
+                                is_list=True,
+                            ),
+                        ),
+                        Attribute(
+                            tags={AttributeTag.NOSUBSCRIBE, AttributeTag.READABLE},
+                            definition=Field(
+                                data_type=DataType(name="int8s"),
+                                code=0xAA,
+                                name="nosub",
+                                is_list=True,
+                            ),
+                        ),
+                        Attribute(
+                            tags={AttributeTag.READABLE},
+                            definition=Field(
+                                data_type=DataType(name="int8s"),
+                                code=0xAB,
+                                name="isNullable",
+                                attributes={FieldAttribute.NULLABLE},
+                            ),
+                        ),
+                    ],
+                )
+            ]
+        )
+
         self.assertEqual(actual, expected)
 
     def test_sized_attribute(self):
@@ -124,17 +177,39 @@ class TestParser(unittest.TestCase):
             }
         """)
 
-        expected = Idl(clusters=[
-            Cluster(side=ClusterSide.SERVER,
+        expected = Idl(
+            clusters=[
+                Cluster(
+                    side=ClusterSide.SERVER,
                     name="MyCluster",
                     code=1,
                     attributes=[
-                        Attribute(tags=set([AttributeTag.READABLE, AttributeTag.WRITABLE]), definition=Field(
-                            data_type=DataType(name="char_string", max_length=11), code=1, name="attr1")),
-                        Attribute(tags=set([AttributeTag.READABLE, AttributeTag.WRITABLE]), definition=Field(
-                            data_type=DataType(name="octet_string", max_length=33), code=2, name="attr2", is_list=True)),
-                    ]
-                    )])
+                        Attribute(
+                            tags={AttributeTag.READABLE, AttributeTag.WRITABLE},
+                            definition=Field(
+                                data_type=DataType(
+                                    name="char_string", max_length=11
+                                ),
+                                code=1,
+                                name="attr1",
+                            ),
+                        ),
+                        Attribute(
+                            tags={AttributeTag.READABLE, AttributeTag.WRITABLE},
+                            definition=Field(
+                                data_type=DataType(
+                                    name="octet_string", max_length=33
+                                ),
+                                code=2,
+                                name="attr2",
+                                is_list=True,
+                            ),
+                        ),
+                    ],
+                )
+            ]
+        )
+
         self.assertEqual(actual, expected)
 
     def test_attribute_access(self):
@@ -148,36 +223,66 @@ class TestParser(unittest.TestCase):
             }
         """)
 
-        expected = Idl(clusters=[
-            Cluster(side=ClusterSide.SERVER,
+        expected = Idl(
+            clusters=[
+                Cluster(
+                    side=ClusterSide.SERVER,
                     name="MyCluster",
                     code=1,
                     attributes=[
-                        Attribute(tags=set([AttributeTag.READABLE, AttributeTag.WRITABLE]), definition=Field(
-                            data_type=DataType(name="int8s"), code=1, name="attr1"),
+                        Attribute(
+                            tags={AttributeTag.READABLE, AttributeTag.WRITABLE},
+                            definition=Field(
+                                data_type=DataType(name="int8s"),
+                                code=1,
+                                name="attr1",
+                            ),
                             readacl=AccessPrivilege.VIEW,
-                            writeacl=AccessPrivilege.OPERATE
+                            writeacl=AccessPrivilege.OPERATE,
                         ),
-                        Attribute(tags=set([AttributeTag.READABLE, AttributeTag.WRITABLE]), definition=Field(
-                            data_type=DataType(name="int8s"), code=2, name="attr2"),
+                        Attribute(
+                            tags={AttributeTag.READABLE, AttributeTag.WRITABLE},
+                            definition=Field(
+                                data_type=DataType(name="int8s"),
+                                code=2,
+                                name="attr2",
+                            ),
                             readacl=AccessPrivilege.VIEW,
-                            writeacl=AccessPrivilege.OPERATE
+                            writeacl=AccessPrivilege.OPERATE,
                         ),
-                        Attribute(tags=set([AttributeTag.READABLE, AttributeTag.WRITABLE]), definition=Field(
-                            data_type=DataType(name="int8s"), code=3, name="attr3"),
-                            readacl=AccessPrivilege.MANAGE
+                        Attribute(
+                            tags={AttributeTag.READABLE, AttributeTag.WRITABLE},
+                            definition=Field(
+                                data_type=DataType(name="int8s"),
+                                code=3,
+                                name="attr3",
+                            ),
+                            readacl=AccessPrivilege.MANAGE,
                         ),
-                        Attribute(tags=set([AttributeTag.READABLE, AttributeTag.WRITABLE]), definition=Field(
-                            data_type=DataType(name="int8s"), code=4, name="attr4"),
-                            writeacl=AccessPrivilege.ADMINISTER
+                        Attribute(
+                            tags={AttributeTag.READABLE, AttributeTag.WRITABLE},
+                            definition=Field(
+                                data_type=DataType(name="int8s"),
+                                code=4,
+                                name="attr4",
+                            ),
+                            writeacl=AccessPrivilege.ADMINISTER,
                         ),
-                        Attribute(tags=set([AttributeTag.READABLE, AttributeTag.WRITABLE]), definition=Field(
-                            data_type=DataType(name="int8s"), code=5, name="attr5"),
+                        Attribute(
+                            tags={AttributeTag.READABLE, AttributeTag.WRITABLE},
+                            definition=Field(
+                                data_type=DataType(name="int8s"),
+                                code=5,
+                                name="attr5",
+                            ),
                             readacl=AccessPrivilege.OPERATE,
-                            writeacl=AccessPrivilege.MANAGE
+                            writeacl=AccessPrivilege.MANAGE,
                         ),
-                    ]
-                    )])
+                    ],
+                )
+            ]
+        )
+
         self.assertEqual(actual, expected)
 
     def test_cluster_commands(self):
@@ -192,26 +297,47 @@ class TestParser(unittest.TestCase):
                 timed command TimedCommand(InParam): DefaultSuccess = 0xab;
             }
         """)
-        expected = Idl(clusters=[
-            Cluster(side=ClusterSide.SERVER,
+        expected = Idl(
+            clusters=[
+                Cluster(
+                    side=ClusterSide.SERVER,
                     name="WithCommands",
                     code=1,
                     structs=[
                         Struct(name="FreeStruct", fields=[]),
-                        Struct(name="InParam", fields=[],
-                               tag=StructTag.REQUEST),
-                        Struct(name="OutParam", fields=[], tag=StructTag.RESPONSE, code=223),
+                        Struct(name="InParam", fields=[], tag=StructTag.REQUEST),
+                        Struct(
+                            name="OutParam",
+                            fields=[],
+                            tag=StructTag.RESPONSE,
+                            code=223,
+                        ),
                     ],
                     commands=[
-                        Command(name="WithoutArg", code=123,
-                                input_param=None, output_param="DefaultSuccess"),
-                        Command(name="InOutStuff", code=222,
-                                input_param="InParam", output_param="OutParam"),
-                        Command(name="TimedCommand", code=0xab,
-                                input_param="InParam", output_param="DefaultSuccess",
-                                attributes=set([CommandAttribute.TIMED_INVOKE])),
+                        Command(
+                            name="WithoutArg",
+                            code=123,
+                            input_param=None,
+                            output_param="DefaultSuccess",
+                        ),
+                        Command(
+                            name="InOutStuff",
+                            code=222,
+                            input_param="InParam",
+                            output_param="OutParam",
+                        ),
+                        Command(
+                            name="TimedCommand",
+                            code=0xAB,
+                            input_param="InParam",
+                            output_param="DefaultSuccess",
+                            attributes={CommandAttribute.TIMED_INVOKE},
+                        ),
                     ],
-                    )])
+                )
+            ]
+        )
+
         self.assertEqual(actual, expected)
 
     def test_cluster_command_access(self):
@@ -225,29 +351,49 @@ class TestParser(unittest.TestCase):
                 command access(invoke: administer) OutOnly(): OutParam = 3;
             }
         """)
-        expected = Idl(clusters=[
-            Cluster(side=ClusterSide.SERVER,
+        expected = Idl(
+            clusters=[
+                Cluster(
+                    side=ClusterSide.SERVER,
                     name="WithCommands",
                     code=1,
                     structs=[
-                        Struct(name="InParam", fields=[],
-                               tag=StructTag.REQUEST),
-                        Struct(name="OutParam", fields=[], tag=StructTag.RESPONSE, code=4),
+                        Struct(name="InParam", fields=[], tag=StructTag.REQUEST),
+                        Struct(
+                            name="OutParam",
+                            fields=[],
+                            tag=StructTag.RESPONSE,
+                            code=4,
+                        ),
                     ],
                     commands=[
-                        Command(name="WithoutArg", code=1,
-                                invokeacl=AccessPrivilege.OPERATE,
-                                input_param=None, output_param="DefaultSuccess"),
-                        Command(name="TimedCommand", code=2,
-                                input_param="InParam", output_param="OutParam",
-                                invokeacl=AccessPrivilege.MANAGE,
-                                attributes=set([CommandAttribute.TIMED_INVOKE])),
-                        Command(name="OutOnly", code=3,
-                                input_param=None, output_param="OutParam",
-                                invokeacl=AccessPrivilege.ADMINISTER,
-                                ),
+                        Command(
+                            name="WithoutArg",
+                            code=1,
+                            invokeacl=AccessPrivilege.OPERATE,
+                            input_param=None,
+                            output_param="DefaultSuccess",
+                        ),
+                        Command(
+                            name="TimedCommand",
+                            code=2,
+                            input_param="InParam",
+                            output_param="OutParam",
+                            invokeacl=AccessPrivilege.MANAGE,
+                            attributes={CommandAttribute.TIMED_INVOKE},
+                        ),
+                        Command(
+                            name="OutOnly",
+                            code=3,
+                            input_param=None,
+                            output_param="OutParam",
+                            invokeacl=AccessPrivilege.ADMINISTER,
+                        ),
                     ],
-                    )])
+                )
+            ]
+        )
+
         self.assertEqual(actual, expected)
 
     def test_cluster_enum(self):

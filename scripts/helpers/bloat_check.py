@@ -59,8 +59,14 @@ class ComparisonResult:
         self.sectionChanges = []
 
 
-SECTIONS_TO_WATCH = set(
-    ['.rodata', '.text', '.flash.rodata', '.flash.text', '.bss', '.data'])
+SECTIONS_TO_WATCH = {
+    '.rodata',
+    '.text',
+    '.flash.rodata',
+    '.flash.text',
+    '.bss',
+    '.data',
+}
 
 
 def filesInDirectory(dirName):
@@ -117,31 +123,31 @@ def generateBloatReport(outputFileName,
     with open(outputFileName, 'wt') as f:
         f.write(title + '\n\n')
 
-        baselineNames = set([name for name in filesInDirectory(baselineDir)])
-        outputNames = set([name for name in filesInDirectory(buildOutputDir)])
+        baselineNames = set(list(filesInDirectory(baselineDir)))
+        outputNames = set(list(filesInDirectory(buildOutputDir)))
 
-        baselineOnly = baselineNames - outputNames
-        if baselineOnly:
+        if baselineOnly := baselineNames - outputNames:
             logging.warning(
                 'Some files only exist in the baseline: %r', baselineOnly)
             f.write('Files found only in the baseline:\n    ')
             f.write('\n    %s'.join(baselineOnly))
             f.write('\n\n')
 
-        outputOnly = outputNames - baselineNames
-        if outputOnly:
+        if outputOnly := outputNames - baselineNames:
             logging.warning('Some files only exist in the build output: %r',
                             outputOnly)
             f.write('Files found only in the build output:\n    ')
             f.write('\n    %s'.join(outputOnly))
             f.write('\n\n')
 
-        results = []
-        for name in (baselineNames & outputNames):
-            results.append(
-                writeFileBloatReport(f, os.path.join(baselineDir, name),
-                                     os.path.join(buildOutputDir, name)))
-        return results
+        return [
+            writeFileBloatReport(
+                f,
+                os.path.join(baselineDir, name),
+                os.path.join(buildOutputDir, name),
+            )
+            for name in (baselineNames & outputNames)
+        ]
 
 
 def sendFileAsPrComment(job_name, filename, gh_token, gh_repo, gh_pr_number,
@@ -257,8 +263,12 @@ def main():
         return
 
     # all known artifacts
-    artifacts = [a for a in github_fetch_artifacts.getAllArtifacts(
-        args.github_api_token, args.github_repository)]
+    artifacts = list(
+        github_fetch_artifacts.getAllArtifacts(
+            args.github_api_token, args.github_repository
+        )
+    )
+
 
     # process newest artifacts first
     artifacts.sort(key=lambda x: x.created_at, reverse=True)
@@ -299,7 +309,7 @@ def main():
             continue
 
         if a.name in seen_names:
-            logging.info('Artifact name already seen before: %s' % a.name)
+            logging.info(f'Artifact name already seen before: {a.name}')
             a.delete()
             continue
 
@@ -311,8 +321,8 @@ def main():
                          (a.name, a.created_at))
             continue
 
-        prefix = m.group(1)
-        pull_number = int(m.group(2))
+        prefix = m[1]
+        pull_number = int(m[2])
 
         logging.info('Processing PR %s via artifact %r' %
                      (pull_number, a.name))
@@ -321,7 +331,7 @@ def main():
             base_sha = getPullRequestBaseSha(
                 args.github_api_token, args.github_repository, pull_number)
 
-            base_artifact_name = '%s-%s' % (prefix, base_sha)
+            base_artifact_name = f'{prefix}-{base_sha}'
 
             base_artifacts = [
                 v for v in artifacts if v.name == base_artifact_name]

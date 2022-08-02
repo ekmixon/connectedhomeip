@@ -36,7 +36,6 @@ CONFIG: ConfigDescription = {
 
 
 def main(argv):
-    status = 0
     try:
         config = Config().init(CONFIG)
         config.argparse.add_argument('inputs', metavar='FILE', nargs=2)
@@ -72,11 +71,8 @@ def main(argv):
                 differences.append((b.size - a.size, a.size, b.size, a.symbol))
             a = next(ai, None)
             b = next(bi, None)
-        for a in ai:
-            differences.append((-a.size, a.size, 0, a.symbol))
-        for b in bi:
-            differences.append((b.size, 0, b.size, b.symbol))
-
+        differences.extend((-a.size, a.size, 0, a.symbol) for a in ai)
+        differences.extend((b.size, 0, b.size, b.symbol) for b in bi)
         df = pd.DataFrame(differences,
                           columns=['change', 'a-size', 'b-size', 'symbol'])
         if config['report.demangle']:
@@ -90,7 +86,7 @@ def main(argv):
     except Exception as exception:
         raise exception
 
-    return status
+    return 0
 
 
 if __name__ == '__main__':

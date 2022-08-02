@@ -40,7 +40,7 @@ class StatefulShell:
     """
 
     def __init__(self) -> None:
-        if sys.platform == "linux" or sys.platform == "linux2":
+        if sys.platform in ["linux", "linux2"]:
             self.shell_app = '/bin/bash'
         elif sys.platform == "darwin":
             self.shell_app = '/bin/zsh'

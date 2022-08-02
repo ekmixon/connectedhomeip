@@ -64,7 +64,7 @@ class Target:
            **kargs: arguments needed to produce the new build variant
         """
         clone = self.Clone()
-        clone.name += "-" + suffix
+        clone.name += f"-{suffix}"
         clone.create_kw_args.update(kargs)
         return clone
 
@@ -109,10 +109,7 @@ class AcceptNameWithSubstrings:
         self.substr = substr
 
     def Accept(self, name: str):
-        for s in self.substr:
-            if s in name:
-                return True
-        return False
+        return any(s in name for s in self.substr)
 
 
 class BuildVariant:
@@ -127,17 +124,17 @@ class BuildVariant:
 
 
 def HasConflicts(items: List[BuildVariant]) -> bool:
-    for a, b in combinations(items, 2):
-        if (a.name in b.conflicts) or (b.name in a.conflicts):
-            return True
-    return False
+    return any(
+        (a.name in b.conflicts) or (b.name in a.conflicts)
+        for a, b in combinations(items, 2)
+    )
 
 
 def AllRequirementsMet(items: List[BuildVariant]) -> bool:
     """
     Check that item.requires is satisfied for all items in the given list
     """
-    available = set([item.name for item in items])
+    available = {item.name for item in items}
 
     for item in items:
         for requirement in item.requires:
@@ -208,10 +205,12 @@ class VariantBuilder:
 
                     # Only a few are whitelisted for globs
                     name = '-'.join([o.name for o in subgroup])
-                    if name not in self.glob_whitelist:
-                        if not variant_target.IsGlobBlacklisted:
-                            variant_target = variant_target.GlobBlacklist(
-                                'Reduce default build variants')
+                    if (
+                        name not in self.glob_whitelist
+                        and not variant_target.IsGlobBlacklisted
+                    ):
+                        variant_target = variant_target.GlobBlacklist(
+                            'Reduce default build variants')
 
                     yield variant_target
 
@@ -227,11 +226,8 @@ def HostTargets():
     if cross_compile:
         targets.append(target.Extend('arm64', board=HostBoard.ARM64))
 
-    app_targets = []
+    app_targets = [target_native.Extend('rpc-console', app=HostApp.RPC_CONSOLE)]
 
-    # Don't cross  compile some builds
-    app_targets.append(
-        target_native.Extend('rpc-console', app=HostApp.RPC_CONSOLE))
     app_targets.append(
         target_native.Extend('nl-test-runner', app=HostApp.NL_TEST_RUNNER))
 
@@ -306,9 +302,24 @@ def HostTargets():
                                use_platform_mdns=True, enable_ipv4=False).GlobBlacklist("Reduce default build variants")
 
     test_target = Target(HostBoard.NATIVE.PlatformName(), HostBuilder)
-    yield test_target.Extend(HostBoard.NATIVE.BoardName() + '-tests', board=HostBoard.NATIVE, app=HostApp.TESTS)
-    yield test_target.Extend(HostBoard.NATIVE.BoardName() + '-tests-clang', board=HostBoard.NATIVE, app=HostApp.TESTS, use_clang=True)
-    yield test_target.Extend(HostBoard.FAKE.BoardName() + '-tests', board=HostBoard.FAKE, app=HostApp.TESTS)
+    yield test_target.Extend(
+        f'{HostBoard.NATIVE.BoardName()}-tests',
+        board=HostBoard.NATIVE,
+        app=HostApp.TESTS,
+    )
+
+    yield test_target.Extend(
+        f'{HostBoard.NATIVE.BoardName()}-tests-clang',
+        board=HostBoard.NATIVE,
+        app=HostApp.TESTS,
+        use_clang=True,
+    )
+
+    yield test_target.Extend(
+        f'{HostBoard.FAKE.BoardName()}-tests',
+        board=HostBoard.FAKE,
+        app=HostApp.TESTS,
+    )
 
 
 def Esp32Targets():
@@ -398,8 +409,7 @@ def Efr32Targets():
 
     builder.WhitelistVariantNameForGlob('rpc')
 
-    for target in builder.AllVariants():
-        yield target
+    yield from builder.AllVariants()
 
 
 def NrfTargets():
@@ -466,14 +476,18 @@ def MbedTargets():
 
     app_targets = []
     for target in targets:
-        app_targets.append(target.Extend('lock', app=MbedApp.LOCK))
-        app_targets.append(target.Extend('light', app=MbedApp.LIGHT))
-        app_targets.append(target.Extend(
-            'all-clusters', app=MbedApp.ALL_CLUSTERS))
-        app_targets.append(target.Extend(
-            'all-clusters-minimal', app=MbedApp.ALL_CLUSTERS_MINIMAL))
-        app_targets.append(target.Extend('pigweed', app=MbedApp.PIGWEED))
-        app_targets.append(target.Extend('shell', app=MbedApp.SHELL))
+        app_targets.extend(
+            (
+                target.Extend('lock', app=MbedApp.LOCK),
+                target.Extend('light', app=MbedApp.LIGHT),
+                target.Extend('all-clusters', app=MbedApp.ALL_CLUSTERS),
+                target.Extend(
+                    'all-clusters-minimal', app=MbedApp.ALL_CLUSTERS_MINIMAL
+                ),
+                target.Extend('pigweed', app=MbedApp.PIGWEED),
+                target.Extend('shell', app=MbedApp.SHELL),
+            )
+        )
 
     for target in app_targets:
         yield target.Extend('release', profile=MbedProfile.RELEASE)
@@ -561,8 +575,7 @@ def TizenTargets():
     builder.targets.append(target.Extend('chip-tool', app=TizenApp.CHIP_TOOL))
     builder.targets.append(target.Extend('light', app=TizenApp.LIGHT))
 
-    for target in builder.AllVariants():
-        yield target
+    yield from builder.AllVariants()
 
 
 def Bl602Targets():
@@ -609,14 +622,23 @@ target_generators = [
 ]
 
 for generator in target_generators:
-    for target in generator:
-        ALL.append(target)
-
-# Simple targets added one by one
-ALL.append(Target('telink-tlsr9518adk80d-light', TelinkBuilder,
-                  board=TelinkBoard.TLSR9518ADK80D, app=TelinkApp.LIGHT))
-ALL.append(Target('telink-tlsr9518adk80d-light-switch', TelinkBuilder,
-                  board=TelinkBoard.TLSR9518ADK80D, app=TelinkApp.SWITCH))
+    ALL.extend(iter(generator))
+ALL.extend(
+    (
+        Target(
+            'telink-tlsr9518adk80d-light',
+            TelinkBuilder,
+            board=TelinkBoard.TLSR9518ADK80D,
+            app=TelinkApp.LIGHT,
+        ),
+        Target(
+            'telink-tlsr9518adk80d-light-switch',
+            TelinkBuilder,
+            board=TelinkBoard.TLSR9518ADK80D,
+            app=TelinkApp.SWITCH,
+        ),
+    )
+)
 
 # have a consistent order overall
 ALL.sort(key=lambda t: t.name)

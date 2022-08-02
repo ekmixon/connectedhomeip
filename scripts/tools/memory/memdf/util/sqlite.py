@@ -106,10 +106,7 @@ class Database:
 
     def get_matching_id(self, table: str, **kwargs):
         cur = self.get_matching(table, ['id'], **kwargs)
-        row = cur.fetchone()
-        if row:
-            return row[0]
-        return None
+        return row[0] if (row := cur.fetchone()) else None
 
     def store_and_return_id(self, table: str, **kwargs) -> Optional[int]:
         self.store(table, **kwargs)

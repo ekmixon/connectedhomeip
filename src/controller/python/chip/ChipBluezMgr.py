@@ -60,10 +60,10 @@ chromecast_setup_service_short = uuid.UUID(
     "0000FEA0-0000-0000-0000-000000000000")
 
 BLUEZ_NAME = "org.bluez"
-ADAPTER_INTERFACE = BLUEZ_NAME + ".Adapter1"
-DEVICE_INTERFACE = BLUEZ_NAME + ".Device1"
-SERVICE_INTERFACE = BLUEZ_NAME + ".GattService1"
-CHARACTERISTIC_INTERFACE = BLUEZ_NAME + ".GattCharacteristic1"
+ADAPTER_INTERFACE = f"{BLUEZ_NAME}.Adapter1"
+DEVICE_INTERFACE = f"{BLUEZ_NAME}.Device1"
+SERVICE_INTERFACE = f"{BLUEZ_NAME}.GattService1"
+CHARACTERISTIC_INTERFACE = f"{BLUEZ_NAME}.GattCharacteristic1"
 DBUS_PROPERTIES = "org.freedesktop.DBus.Properties"
 
 BLE_SCAN_CONNECT_GUARD_SEC = 2.0
@@ -94,7 +94,7 @@ def get_bluez_objects(bluez, bus, interface, prefix_path):
 
 class BluezDbusAdapter:
     def __init__(self, bluez_obj, bluez, bus, logger=None):
-        self.logger = logger if logger else logging.getLogger("ChipBLEMgr")
+        self.logger = logger or logging.getLogger("ChipBLEMgr")
         self.object = bluez_obj
         self.adapter = dbus.Interface(bluez_obj, ADAPTER_INTERFACE)
         self.adapter_properties = dbus.Interface(bluez_obj, DBUS_PROPERTIES)
@@ -153,34 +153,33 @@ class BluezDbusAdapter:
             )
             return
 
-        if interface == ADAPTER_INTERFACE:
-            if "Discovering" in changed_properties:
-                self.adapter_event.set()
+        if interface == ADAPTER_INTERFACE and "Discovering" in changed_properties:
+            self.adapter_event.set()
 
     def adapter_bg_scan(self, enable):
         self.adapter_event.clear()
         action_flag = False
         try:
             if enable:
-                if not self.Discovering:
+                if self.Discovering:
+                    self.logger.info("it has started scanning")
+                else:
                     action_flag = True
                     self.logger.info("scanning started")
                     self.adapter.StartDiscovery()
-                else:
-                    self.logger.info("it has started scanning")
+            elif self.Discovering:
+                action_flag = True
+                self.adapter.StopDiscovery()
+                self.logger.info("scanning stopped")
             else:
-                if self.Discovering:
-                    action_flag = True
-                    self.adapter.StopDiscovery()
-                    self.logger.info("scanning stopped")
+                print("it has stopped scanning")
+            if action_flag and not self.adapter_event.wait(
+                BLE_STATUS_TRANSITION_TIMEOUT_SEC
+            ):
+                if enable:
+                    self.logger.debug("scan start error")
                 else:
-                    print("it has stopped scanning")
-            if action_flag:
-                if not self.adapter_event.wait(BLE_STATUS_TRANSITION_TIMEOUT_SEC):
-                    if enable:
-                        self.logger.debug("scan start error")
-                    else:
-                        self.logger.debug("scan stop error")
+                    self.logger.debug("scan stop error")
             self.adapter_event.clear()
         except dbus.exceptions.DBusException as ex:
             self.adapter_event.clear()
@@ -191,8 +190,7 @@ class BluezDbusAdapter:
     @property
     def Address(self):
         try:
-            result = self.adapter_properties.Get(ADAPTER_INTERFACE, "Address")
-            return result
+            return self.adapter_properties.Get(ADAPTER_INTERFACE, "Address")
         except dbus.exceptions.DBusException as ex:
             self.logger.debug(str(ex))
             return None
@@ -296,7 +294,7 @@ class BluezDbusAdapter:
 
 class BluezDbusDevice:
     def __init__(self, bluez_obj, bluez, bus, logger=None):
-        self.logger = logger if logger else logging.getLogger("ChipBLEMgr")
+        self.logger = logger or logging.getLogger("ChipBLEMgr")
         self.object = bluez_obj
         self.device = dbus.Interface(bluez_obj, DEVICE_INTERFACE)
         self.device_properties = dbus.Interface(bluez_obj, DBUS_PROPERTIES)
@@ -365,9 +363,8 @@ class BluezDbusDevice:
             )
             return
 
-        if interface == DEVICE_INTERFACE:
-            if "Connected" in changed_properties:
-                self.device_event.set()
+        if interface == DEVICE_INTERFACE and "Connected" in changed_properties:
+            self.device_event.set()
 
     def device_bg_connect(self, enable):
         time.sleep(BLE_SCAN_CONNECT_GUARD_SEC)
@@ -375,25 +372,25 @@ class BluezDbusDevice:
         self.device_event.clear()
         try:
             if enable:
-                if not self.Connected:
+                if self.Connected:
+                    self.logger.info("BLE has connected")
+                else:
                     action_flag = True
                     self.device.Connect()
                     self.logger.info("BLE connecting")
-                else:
-                    self.logger.info("BLE has connected")
+            elif self.Connected:
+                action_flag = True
+                self.device.Disconnect()
+                self.logger.info("BLE disconnected")
             else:
-                if self.Connected:
-                    action_flag = True
-                    self.device.Disconnect()
-                    self.logger.info("BLE disconnected")
+                self.logger.info("BLE has disconnected")
+            if action_flag and not self.device_event.wait(
+                BLE_STATUS_TRANSITION_TIMEOUT_SEC
+            ):
+                if enable:
+                    self.logger.info("BLE connect error")
                 else:
-                    self.logger.info("BLE has disconnected")
-            if action_flag:
-                if not self.device_event.wait(BLE_STATUS_TRANSITION_TIMEOUT_SEC):
-                    if enable:
-                        self.logger.info("BLE connect error")
-                    else:
-                        self.logger.info("BLE disconnect error")
+                    self.logger.info("BLE disconnect error")
             self.device_event.clear()
         except dbus.exceptions.DBusException as ex:
             self.device_event.clear()
@@ -435,10 +432,7 @@ class BluezDbusDevice:
             uuids = self.device_properties.Get(DEVICE_INTERFACE, "UUIDs")
             uuid_result = []
             for i in uuids:
-                if len(str(i)) == 4:
-                    uuid_normal = "0000%s-0000-0000-0000-000000000000" % i
-                else:
-                    uuid_normal = i
+                uuid_normal = f"0000{i}-0000-0000-0000-000000000000" if len(str(i)) == 4 else i
                 uuid_result.append(uuid.UUID(str(uuid_normal)))
             return uuid_result
         except dbus.exceptions.DBusException as ex:
@@ -462,8 +456,7 @@ class BluezDbusDevice:
     @property
     def Name(self):
         try:
-            name = self.device_properties.Get(DEVICE_INTERFACE, "Name")
-            return name
+            return self.device_properties.Get(DEVICE_INTERFACE, "Name")
         except dbus.exceptions.DBusException as ex:
             self.logger.debug(str(ex))
             return None
@@ -497,8 +490,7 @@ class BluezDbusDevice:
     @property
     def RSSI(self):
         try:
-            result = self.device_properties.Get(DEVICE_INTERFACE, "RSSI")
-            return result
+            return self.device_properties.Get(DEVICE_INTERFACE, "RSSI")
         except dbus.exceptions.DBusException as ex:
             self.logger.debug(str(ex))
             return None
@@ -544,7 +536,7 @@ class BluezDbusDevice:
 
 class BluezDbusGattService:
     def __init__(self, bluez_obj, bluez, bus, logger=None):
-        self.logger = logger if logger else logging.getLogger("ChipBLEMgr")
+        self.logger = logger or logging.getLogger("ChipBLEMgr")
         self.object = bluez_obj
         self.service = dbus.Interface(bluez_obj, SERVICE_INTERFACE)
         self.service_properties = dbus.Interface(bluez_obj, DBUS_PROPERTIES)
@@ -567,10 +559,10 @@ class BluezDbusGattService:
     @property
     def uuid(self):
         try:
-            result = uuid.UUID(
+            return uuid.UUID(
                 str(self.service_properties.Get(SERVICE_INTERFACE, "UUID"))
             )
-            return result
+
         except dbus.exceptions.DBusException as ex:
             self.logger.debug(str(ex))
             return None
@@ -581,9 +573,8 @@ class BluezDbusGattService:
     @property
     def Primary(self):
         try:
-            result = bool(self.service_properties.Get(
-                SERVICE_INTERFACE, "Primary"))
-            return result
+            return bool(self.service_properties.Get(SERVICE_INTERFACE, "Primary"))
+
         except dbus.exceptions.DBusException as ex:
             self.logger.debug(str(ex))
             return False
@@ -594,8 +585,7 @@ class BluezDbusGattService:
     @property
     def Device(self):
         try:
-            result = self.service_properties.Get(SERVICE_INTERFACE, "Device")
-            return result
+            return self.service_properties.Get(SERVICE_INTERFACE, "Device")
         except dbus.exceptions.DBusException as ex:
             self.logger.debug(str(ex))
             return None
@@ -631,7 +621,7 @@ class BluezDbusGattService:
 
 class BluezDbusGattCharacteristic:
     def __init__(self, bluez_obj, bluez, bus, logger=None):
-        self.logger = logger if logger else logging.getLogger("ChipBLEMgr")
+        self.logger = logger or logging.getLogger("ChipBLEMgr")
         self.object = bluez_obj
         self.characteristic = dbus.Interface(
             bluez_obj, CHARACTERISTIC_INTERFACE)
@@ -696,10 +686,12 @@ class BluezDbusGattCharacteristic:
         if len(invalidated_properties) > 0:
             return
 
-        if interface == CHARACTERISTIC_INTERFACE:
-            if "Value" in changed_properties:
-                if self.received:
-                    self.received(changed_properties["Value"])
+        if (
+            interface == CHARACTERISTIC_INTERFACE
+            and "Value" in changed_properties
+            and self.received
+        ):
+            self.received(changed_properties["Value"])
 
     def WriteValue(self, value, options, reply_handler, error_handler, timeout):
         try:
@@ -718,13 +710,14 @@ class BluezDbusGattCharacteristic:
     @property
     def uuid(self):
         try:
-            result = uuid.UUID(
+            return uuid.UUID(
                 str(
                     self.characteristic_properties.Get(
-                        CHARACTERISTIC_INTERFACE, "UUID")
+                        CHARACTERISTIC_INTERFACE, "UUID"
+                    )
                 )
             )
-            return result
+
         except dbus.exceptions.DBusException as ex:
             self.logger.debug(str(ex))
             return None
@@ -845,8 +838,10 @@ class BluezManager(ChipBleBase):
                 )
             ]
             for adapter in adapters:
-                self.logger.info("AdapterName: %s   AdapterAddress: %s" % (
-                    adapter.path.replace("/org/bluez/", ""), adapter.Address))
+                self.logger.info(
+                    f'AdapterName: {adapter.path.replace("/org/bluez/", "")}   AdapterAddress: {adapter.Address}'
+                )
+
         except dbus.exceptions.DBusException as ex:
             self.logger.debug(str(ex))
 
@@ -861,14 +856,16 @@ class BluezManager(ChipBleBase):
             ]
             if identifier is None:
                 return adapters[0]
-            if len(adapters) > 0:
+            if adapters:
                 for adapter in adapters:
-                    if str(adapter.Address).upper() == str(identifier).upper() or "/org/bluez/{}".format(identifier) == str(adapter.path):
+                    if str(adapter.Address).upper() == str(
+                        identifier
+                    ).upper() or f"/org/bluez/{identifier}" == str(adapter.path):
                         return adapter
             self.logger.info(
-                "adapter %s cannot be found, expect the ble mac address" % (
-                    identifier)
+                f"adapter {identifier} cannot be found, expect the ble mac address"
             )
+
             return None
 
         except dbus.exceptions.DBusException as ex:
@@ -1013,12 +1010,18 @@ class BluezManager(ChipBleBase):
         return True
 
     def get_peripheral_devIdInfo(self, peripheral):
-        if not peripheral.ServiceData:
-            return None
-        for advuuid in peripheral.ServiceData:
-            if str(advuuid).lower() == str(chip_service).lower():
-                return ParseServiceData(bytes(peripheral.ServiceData[advuuid]))
-        return None
+        return (
+            next(
+                (
+                    ParseServiceData(bytes(peripheral.ServiceData[advuuid]))
+                    for advuuid in peripheral.ServiceData
+                    if str(advuuid).lower() == str(chip_service).lower()
+                ),
+                None,
+            )
+            if peripheral.ServiceData
+            else None
+        )
 
     def ble_debug_log(self, line):
         args = self.ParseInputLine(line)

@@ -90,10 +90,9 @@ class Flasher(firmware_utils.Flasher):
         """Flash image."""
 
         arguments = [
-            "--hex={}/{}_download.hex".format(
-                self.option.application.parent, self.option.application.stem
-            ),
+            f"--hex={self.option.application.parent}/{self.option.application.stem}_download.hex"
         ]
+
         if self.option.port:
             arguments.append("--uart={port}")
         if self.option.verbose > 0:
@@ -111,23 +110,16 @@ class Flasher(firmware_utils.Flasher):
         """Perform actions on the device according to self.option."""
         self.log(3, "Options:", self.option)
 
-        if self.option.erase:
-            if self.erase().err:
-                return self
+        if self.option.erase and self.erase().err:
+            return self
 
-        if self.option.verify_application:
-            if self.verify().err:
-                return self
+        if self.option.verify_application and self.verify().err:
+            return self
 
-        if self.option.reset:
-            if self.reset().err:
-                return self
+        if self.option.reset and self.reset().err:
+            return self
 
-        if self.option.application:
-            if self.flash().err:
-                return self
-
-        return self
+        return self if self.option.application and self.flash().err else self
 
 
 if __name__ == "__main__":

@@ -176,7 +176,7 @@ class Config:
 
             group: Optional[str] = info.get('group')
             if group is None and (e := key.find('.')) > 0:
-                group = key[0:e]
+                group = key[:e]
             group = self.group_alias.get(group, group)
             arg_group = self.argparse_groups.get(group, self.argparse)
             arg = arg_group.add_argument(*names,
@@ -224,7 +224,7 @@ class Config:
         args = self.argparse.parse_args(argv)
         for dest, value in vars(args).items():
             if (key := self.dest_to_key.get(dest)) is None:
-                key = 'args.' + dest
+                key = f'args.{dest}'
             self.put(key, value)
 
         # Configure logging.

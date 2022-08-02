@@ -66,10 +66,8 @@ class TelinkBuilder(Builder):
         if os.path.exists(self.output_dir):
             return
 
-        if not self._runner.dry_run:
-            # Zephyr base
-            if 'TELINK_ZEPHYR_BASE' not in os.environ:
-                raise Exception("Telink builds require TELINK_ZEPHYR_BASE")
+        if not self._runner.dry_run and 'TELINK_ZEPHYR_BASE' not in os.environ:
+            raise Exception("Telink builds require TELINK_ZEPHYR_BASE")
 
         cmd = 'export ZEPHYR_BASE="$TELINK_ZEPHYR_BASE"\n'
 
@@ -86,25 +84,21 @@ west build --cmake-only -d {outdir} -b {board} {sourcedir}
                 os.path.join(
                     self.root, 'examples', self.app.ExampleName(), 'telink'))).strip()
 
-        self._Execute(['bash', '-c', cmd],
-                      title='Generating ' + self.identifier)
+        self._Execute(['bash', '-c', cmd], title=f'Generating {self.identifier}')
 
     def _build(self):
         logging.info('Compiling Telink at %s', self.output_dir)
 
-        self._Execute(['ninja', '-C', self.output_dir],
-                      title='Building ' + self.identifier)
+        self._Execute(
+            ['ninja', '-C', self.output_dir], title=f'Building {self.identifier}'
+        )
 
     def build_outputs(self):
         return {
-            '%s.elf' %
-            self.app.AppNamePrefix(): os.path.join(
-                self.output_dir,
-                'zephyr',
-                'zephyr.elf'),
-            '%s.map' %
-            self.app.AppNamePrefix(): os.path.join(
-                self.output_dir,
-                'zephyr',
-                'zephyr.map'),
+            f'{self.app.AppNamePrefix()}.elf': os.path.join(
+                self.output_dir, 'zephyr', 'zephyr.elf'
+            ),
+            f'{self.app.AppNamePrefix()}.map': os.path.join(
+                self.output_dir, 'zephyr', 'zephyr.map'
+            ),
         }

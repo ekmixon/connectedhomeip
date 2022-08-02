@@ -32,16 +32,12 @@ class ZAPGenerateTarget:
         self.zap_config = str(zap_config)
         self.template = template
 
-        if output_dir:
-            # make sure we convert  any os.PathLike object to string
-            self.output_dir = str(output_dir)
-        else:
-            self.output_dir = None
+        self.output_dir = str(output_dir) if output_dir else None
 
     def log_command(self):
         """Log the command that will get run for this target
         """
-        logging.info("  %s" % " ".join(self.build_cmd()))
+        logging.info(f'  {" ".join(self.build_cmd())}')
 
     def build_cmd(self):
         """Builds the command line we would run to generate this target.
@@ -49,22 +45,18 @@ class ZAPGenerateTarget:
         cmd = [self.script, self.zap_config]
 
         if self.template:
-            cmd.append('-t')
-            cmd.append(self.template)
-
+            cmd.extend(('-t', self.template))
         if self.output_dir:
             if not os.path.exists(self.output_dir):
                 os.makedirs(self.output_dir)
-            cmd.append('-o')
-            cmd.append(self.output_dir)
-
+            cmd.extend(('-o', self.output_dir))
         return cmd
 
     def generate(self):
         """Runs a ZAP generate command on the configured zap/template/outputs.
         """
         cmd = self.build_cmd()
-        logging.info("Generating target: %s" % " ".join(cmd))
+        logging.info(f'Generating target: {" ".join(cmd)}')
         subprocess.check_call(cmd)
         if "chef" in self.zap_config:
             af_gen_event = os.path.join(self.output_dir, "af-gen-event.h")
@@ -111,8 +103,7 @@ def getGlobalTemplatesTargets():
             example_name = example_name[example_name.index(
                 'apps/') + len('apps/'):]
             example_name = example_name[:example_name.index('/')]
-            logging.info("Found example %s (via %s)" %
-                         (example_name, str(filepath)))
+            logging.info(f"Found example {example_name} (via {str(filepath)})")
 
             # The name zap-generated is to make includes clear by using
             # a name like <zap-generated/foo.h>
@@ -120,9 +111,15 @@ def getGlobalTemplatesTargets():
                 'zzz_generated', 'placeholder', example_name, 'zap-generated')
             template = 'examples/placeholder/templates/templates.json'
 
-            targets.append(ZAPGenerateTarget(filepath, output_dir=output_dir))
-            targets.append(
-                ZAPGenerateTarget(filepath, output_dir=output_dir, template=template))
+            targets.extend(
+                (
+                    ZAPGenerateTarget(filepath, output_dir=output_dir),
+                    ZAPGenerateTarget(
+                        filepath, output_dir=output_dir, template=template
+                    ),
+                )
+            )
+
             continue
 
         if example_name == "chef":
@@ -130,8 +127,7 @@ def getGlobalTemplatesTargets():
                 continue
             example_name = "chef-"+os.path.basename(filepath)[:-len(".zap")]
 
-        logging.info("Found example %s (via %s)" %
-                     (example_name, str(filepath)))
+        logging.info(f"Found example {example_name} (via {str(filepath)})")
 
         # The name zap-generated is to make includes clear by using
         # a name like <zap-generated/foo.h>
@@ -175,9 +171,8 @@ def getTestsTemplatesTargets(test_target):
 
     targets = []
     for key, target in templates.items():
-        if test_target == 'all' or test_target == key:
-            logging.info("Found test target %s (via %s)" %
-                         (key, target['template']))
+        if test_target in ['all', key]:
+            logging.info(f"Found test target {key} (via {target['template']})")
             targets.append(ZAPGenerateTarget(
                 target['zap'], template=target['template'], output_dir=target['output_dir']))
 
@@ -200,7 +195,7 @@ def getSpecificTemplatesTargets():
 
     targets = []
     for template, output_dir in templates.items():
-        logging.info("Found specific template %s" % template)
+        logging.info(f"Found specific template {template}")
         targets.append(ZAPGenerateTarget(
             zap_filepath, template=template, output_dir=output_dir))
 

@@ -53,9 +53,7 @@ def get_raw_private_key_der(der_file: str, password: str):
             if password is None:
                 log.warning("KEY password has not been provided. It means that DAC key is not encrypted.")
             keys = load_der_private_key(key_data, password, backend=default_backend())
-            private_key = keys.private_numbers().private_value.to_bytes(32, byteorder='big')
-
-            return private_key
+            return keys.private_numbers().private_value.to_bytes(32, byteorder='big')
 
     except IOError or ValueError:
         return None
@@ -75,12 +73,18 @@ def gen_spake2p_params(spake2p_path: str, passcode: int, it: int, salt: str) -> 
     """
 
     cmd = [
-        spake2p_path, 'gen-verifier',
-        '--iteration-count', str(it),
-        '--salt', str(salt),
-        '--pin-code', str(passcode),
-        '--out', '-',
+        spake2p_path,
+        'gen-verifier',
+        '--iteration-count',
+        str(it),
+        '--salt',
+        salt,
+        '--pin-code',
+        str(passcode),
+        '--out',
+        '-',
     ]
+
     output = subprocess.check_output(cmd)
     output = output.decode('utf-8').splitlines()
     return dict(zip(output[0].split(','), output[1].split(',')))
@@ -98,8 +102,8 @@ class FactoryDataGenerator:
             arguments (any):All input arguments parsed using ArgParse
         """
         self._args = arguments
-        self._factory_data = list()
-        self._user_data = dict()
+        self._factory_data = []
+        self._user_data = {}
 
         try:
             self._validate_args()
@@ -112,15 +116,21 @@ class FactoryDataGenerator:
             try:
                 self._user_data = json.loads(self._args.user)
             except json.decoder.JSONDecodeError as e:
-                raise AssertionError("Provided wrong user data, this is not a Json format! {}".format(e))
+                raise AssertionError(
+                    f"Provided wrong user data, this is not a Json format! {e}"
+                )
+
         assert (self._args.spake2_verifier or (self._args.passcode and self._args.spake2p_path)), \
-            "Can not find spake2 verifier, to generate a new one please provide passcode (--passcode) and path to spake2p script (--spake2p_path)"
+                "Can not find spake2 verifier, to generate a new one please provide passcode (--passcode) and path to spake2p script (--spake2p_path)"
         assert (self._args.chip_cert_path or (self._args.dac_cert and self._args.pai_cert and self._args.dac_key)), \
-            "Can not find paths to DAC or PAI certificates .der files. To generate a new ones please provide a path to chip-cert executable (--chip_cert_path)"
-        assert self._args.output.endswith(".json"), \
-            "Output path doesn't contain .json file path. ({})".format(self._args.output)
-        assert not (self._args.passcode in INVALID_PASSCODES), \
-            "Provided invalid passcode!"
+                "Can not find paths to DAC or PAI certificates .der files. To generate a new ones please provide a path to chip-cert executable (--chip_cert_path)"
+        assert self._args.output.endswith(
+            ".json"
+        ), f"Output path doesn't contain .json file path. ({self._args.output})"
+
+        assert (
+            self._args.passcode not in INVALID_PASSCODES
+        ), "Provided invalid passcode!"
 
     def generate_json(self):
         """
@@ -137,18 +147,18 @@ class FactoryDataGenerator:
 
         """
         # generate missing data if needed
-        if not self._args.rd_uid:
-            if self._args.generate_rd_uid:
-                rd_uid = self._generate_rotating_device_uid()
-            else:
-                # rotating device ID unique ID was not provided, so do not store it in factory data.
-                rd_uid = None
-        else:
+        if self._args.rd_uid:
             rd_uid = self._args.rd_uid
-        if not self._args.spake2_verifier:
-            spake_2_verifier = base64.b64decode(self._generate_spake2_verifier())
+        elif self._args.generate_rd_uid:
+            rd_uid = self._generate_rotating_device_uid()
         else:
-            spake_2_verifier = base64.b64decode(self._args.spake2_verifier)
+            # rotating device ID unique ID was not provided, so do not store it in factory data.
+            rd_uid = None
+        spake_2_verifier = (
+            base64.b64decode(self._args.spake2_verifier)
+            if self._args.spake2_verifier
+            else base64.b64decode(self._generate_spake2_verifier())
+        )
 
         # convert salt to bytestring to be coherent with spake2 verifier type
         spake_2_salt = base64.b64decode(self._args.spake2_salt)
@@ -156,13 +166,13 @@ class FactoryDataGenerator:
         # try to read DAC public and private keys
         dac_priv_key = get_raw_private_key_der(self._args.dac_key, self._args.dac_key_password)
         if dac_priv_key is None:
-            log.error("Can not read DAC keys from : {}".format(self._args.dac_key))
+            log.error(f"Can not read DAC keys from : {self._args.dac_key}")
             sys.exit(-1)
 
         try:
             json_file = open(self._args.output, "w+")
         except FileNotFoundError:
-            print("Can not create JSON file in this location: {}".format(self._args.output))
+            print(f"Can not create JSON file in this location: {self._args.output}")
             sys.exit(-1)
         with json_file:
             # serialize data
@@ -202,14 +212,17 @@ class FactoryDataGenerator:
                 if is_json_valid:
                     json_file.write(json_object)
             except IOError as e:
-                log.error("Can not save output file into directory: {}".format(self._args.output))
+                log.error(f"Can not save output file into directory: {self._args.output}")
 
     def _add_entry(self, name: str, value: any):
         """ Add single entry to list of tuples ("key", "value") """
-        if(isinstance(value, bytes) or isinstance(value, bytearray)):
+        if isinstance(value, (bytes, bytearray)):
             value = HEX_PREFIX + value.hex()
         if value or (isinstance(value, int) and value == 0):
-            log.debug("Adding entry '{}' with size {} and type {}".format(name, sys.getsizeof(value), type(value)))
+            log.debug(
+                f"Adding entry '{name}' with size {sys.getsizeof(value)} and type {type(value)}"
+            )
+
             self._factory_data.append((name, value))
 
     def _generate_spake2_verifier(self):
@@ -222,7 +235,7 @@ class FactoryDataGenerator:
         """ If rotating device unique ID has not been provided it should be generated """
         log.warning("Can not find rotating device UID in provided arguments list. A new one will be generated.")
         rdu = secrets.token_bytes(16)
-        log.info("\n\nThe new rotate device UID: {}\n".format(rdu.hex()))
+        log.info(f"\n\nThe new rotate device UID: {rdu.hex()}\n")
         return rdu
 
     def _validate_output_json(self, output_json: str):
@@ -238,7 +251,7 @@ class FactoryDataGenerator:
                 validator = jsonschema.Draft202012Validator(schema=schema)
                 validator.validate(instance=json.loads(output_json))
         except IOError as e:
-            log.error("provided Json schema file is wrong: {}".format(self._args.schema))
+            log.error(f"provided Json schema file is wrong: {self._args.schema}")
             return False
         else:
             log.info("Validate OK")
@@ -248,8 +261,7 @@ class FactoryDataGenerator:
         log.debug("Processing der file...")
         try:
             with open(path, 'rb') as f:
-                data = f.read()
-                return data
+                return f.read()
         except IOError as e:
             log.error(e)
             raise e

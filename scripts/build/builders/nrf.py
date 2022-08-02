@@ -96,7 +96,7 @@ class NrfApp(Enum):
         Nrf build script will generate a file naming <project_name>.flashbundle.txt,
         go through the output dir to find the file and return it.
         '''
-        return self._FlashBundlePrefix() + '.flashbundle.txt'
+        return f'{self._FlashBundlePrefix()}.flashbundle.txt'
 
 
 class NrfBoard(Enum):
@@ -132,83 +132,102 @@ class NrfConnectBuilder(Builder):
         self.enable_rpcs = enable_rpcs
 
     def generate(self):
-        if not os.path.exists(self.output_dir):
+        if os.path.exists(self.output_dir):
+            return
             # NRF does a in-place update  of SDK tools
-            if not self._runner.dry_run:
-                if 'ZEPHYR_BASE' not in os.environ:
-                    raise Exception("NRF builds require ZEPHYR_BASE to be set")
+        if not self._runner.dry_run:
+            if 'ZEPHYR_BASE' not in os.environ:
+                raise Exception("NRF builds require ZEPHYR_BASE to be set")
 
-                zephyr_base = os.environ['ZEPHYR_BASE']
-                nrfconnect_sdk = os.path.dirname(zephyr_base)
+            zephyr_base = os.environ['ZEPHYR_BASE']
+            nrfconnect_sdk = os.path.dirname(zephyr_base)
 
                 # NRF builds will both try to change .west/config in nrfconnect and
                 # overall perform a git fetch on that location
-                if not os.access(nrfconnect_sdk, os.W_OK):
-                    raise Exception(
-                        "Directory %s not writable. NRFConnect builds require updates to this directory." % nrfconnect_sdk)
+            if not os.access(nrfconnect_sdk, os.W_OK):
+                raise Exception(
+                    f"Directory {nrfconnect_sdk} not writable. NRFConnect builds require updates to this directory."
+                )
 
-                # validate the the ZEPHYR_BASE is up to date (generally the case in docker images)
-                try:
-                    self._Execute(
-                        ['python3', 'scripts/setup/nrfconnect/update_ncs.py', '--check'])
-                except Exception:
-                    logging.exception('Failed to validate ZEPHYR_BASE status')
-                    logging.error(
-                        'To update $ZEPHYR_BASE run: python3 scripts/setup/nrfconnect/update_ncs.py --update --shallow')
 
-                    raise Exception('ZEPHYR_BASE validation failed')
+            # validate the the ZEPHYR_BASE is up to date (generally the case in docker images)
+            try:
+                self._Execute(
+                    ['python3', 'scripts/setup/nrfconnect/update_ncs.py', '--check'])
+            except Exception:
+                logging.exception('Failed to validate ZEPHYR_BASE status')
+                logging.error(
+                    'To update $ZEPHYR_BASE run: python3 scripts/setup/nrfconnect/update_ncs.py --update --shallow')
 
-            flags = []
-            if self.enable_rpcs:
-                flags.append("-DOVERLAY_CONFIG=rpc.overlay")
+                raise Exception('ZEPHYR_BASE validation failed')
 
-            if self.board == NrfBoard.NRF52840DONGLE and self.app != NrfApp.ALL_CLUSTERS and self.app != NrfApp.ALL_CLUSTERS_MINIMAL:
-                flags.append("-DCONF_FILE=prj_no_dfu.conf")
+        flags = []
+        if self.enable_rpcs:
+            flags.append("-DOVERLAY_CONFIG=rpc.overlay")
 
-            build_flags = " -- " + " ".join(flags) if len(flags) > 0 else ""
+        if self.board == NrfBoard.NRF52840DONGLE and self.app != NrfApp.ALL_CLUSTERS and self.app != NrfApp.ALL_CLUSTERS_MINIMAL:
+            flags.append("-DCONF_FILE=prj_no_dfu.conf")
 
-            cmd = '''
+        build_flags = " -- " + " ".join(flags) if flags else ""
+
+        cmd = '''
 source "$ZEPHYR_BASE/zephyr-env.sh";
 export GNUARMEMB_TOOLCHAIN_PATH="$PW_ARM_CIPD_INSTALL_DIR";
 west build --cmake-only -d {outdir} -b {board} {sourcedir}{build_flags}
         '''.format(
-                outdir=shlex.quote(self.output_dir),
-                board=self.board.GnArgName(),
-                sourcedir=shlex.quote(os.path.join(
-                    self.root, self.app.AppPath(), 'nrfconnect')),
-                build_flags=build_flags
-            ).strip()
-            self._Execute(['bash', '-c', cmd],
-                          title='Generating ' + self.identifier)
+            outdir=shlex.quote(self.output_dir),
+            board=self.board.GnArgName(),
+            sourcedir=shlex.quote(os.path.join(
+                self.root, self.app.AppPath(), 'nrfconnect')),
+            build_flags=build_flags
+        ).strip()
+        self._Execute(['bash', '-c', cmd], title=f'Generating {self.identifier}')
 
     def _build(self):
         logging.info('Compiling NrfConnect at %s', self.output_dir)
 
-        self._Execute(['ninja', '-C', self.output_dir],
-                      title='Building ' + self.identifier)
+        self._Execute(
+            ['ninja', '-C', self.output_dir], title=f'Building {self.identifier}'
+        )
+
 
         if self.app == NrfApp.UNIT_TESTS:
             # Note: running zephyr/zephyr.elf has the same result except it creates
             # a flash.bin in the current directory. ctest has more options and does not
             # pollute the source directory
-            self._Execute(['ctest', '--build-nocmake', '-V', '--output-on-failure', '--test-dir', self.output_dir],
-                          title='Run Tests ' + self.identifier)
+            self._Execute(
+                [
+                    'ctest',
+                    '--build-nocmake',
+                    '-V',
+                    '--output-on-failure',
+                    '--test-dir',
+                    self.output_dir,
+                ],
+                title=f'Run Tests {self.identifier}',
+            )
 
     def _generate_flashbundle(self):
         logging.info(f'Generating flashbundle at {self.output_dir}')
 
-        self._Execute(['ninja', '-C', self.output_dir, 'flashing_script'],
-                      title='Generating flashable files of ' + self.identifier)
+        self._Execute(
+            ['ninja', '-C', self.output_dir, 'flashing_script'],
+            title=f'Generating flashable files of {self.identifier}',
+        )
 
     def build_outputs(self):
         return {
-            '%s.elf' % self.app.AppNamePrefix(): os.path.join(self.output_dir, 'zephyr', 'zephyr.elf'),
-            '%s.map' % self.app.AppNamePrefix(): os.path.join(self.output_dir, 'zephyr', 'zephyr.map'),
+            f'{self.app.AppNamePrefix()}.elf': os.path.join(
+                self.output_dir, 'zephyr', 'zephyr.elf'
+            ),
+            f'{self.app.AppNamePrefix()}.map': os.path.join(
+                self.output_dir, 'zephyr', 'zephyr.map'
+            ),
         }
 
     def flashbundle(self):
         if self.app == NrfApp.UNIT_TESTS:
-            return dict()
+            return {}
 
         with open(os.path.join(self.output_dir, self.app.FlashBundleName()), 'r') as fp:
             return {

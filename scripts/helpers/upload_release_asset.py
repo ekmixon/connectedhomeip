@@ -27,7 +27,7 @@ import os
 class BundleBuilder:
 
     def __init__(self, outputName, outputPrefix, workingDirectory):
-        self.outputName = outputName + '.tar.xz'
+        self.outputName = f'{outputName}.tar.xz'
         self.outputPrefix = outputPrefix
         self.workingDirectory = workingDirectory
 
@@ -97,7 +97,7 @@ def main():
                            args.working_directory)
 
     with open(args.bundle_files, 'rt') as bundleInputs:
-        for fileName in bundleInputs.readlines():
+        for fileName in bundleInputs:
             bundle.appendFile(fileName.strip())
 
     assetPath = bundle.close()
